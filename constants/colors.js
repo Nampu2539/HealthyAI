@@ -1,0 +1,15 @@
+export const Colors = {
+  primary: "#16A34A",
+  primaryLight: "#22C55E",
+  primaryDark: "#15803D",
+  background: "#F0FDF4",
+  card: "#FFFFFF",
+  border: "#DCFCE7",
+  text: "#14532D",
+  textMuted: "#6B7280",
+  danger: "#EF4444",
+  warning: "#F59E0B",
+  success: "#16A34A",
+  white: "#FFFFFF",
+  dark: "#111827",
+}
