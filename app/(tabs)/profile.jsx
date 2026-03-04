@@ -1,9 +1,16 @@
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native"
 import { useRouter } from "expo-router"
 import { Colors } from "../../constants/colors"
+import { useAuth } from "../../context/AuthContext"
 
 export default function Profile() {
   const router = useRouter()
+  const { user, logout } = useAuth()
+
+  const handleLogout = () => {
+    logout()
+    window.location.href = "/"
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -11,8 +18,8 @@ export default function Profile() {
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>🌿</Text>
         </View>
-        <Text style={styles.name}>Supawit</Text>
-        <Text style={styles.email}>supawit@healthyai.com</Text>
+        <Text style={styles.name}>{user?.name ?? "User"}</Text>
+        <Text style={styles.email}>{user?.email ?? ""}</Text>
       </View>
 
       {[
@@ -28,12 +35,11 @@ export default function Profile() {
         </TouchableOpacity>
       ))}
 
-      <TouchableOpacity
-        style={styles.logoutBtn}
-        onPress={() => router.replace("/")}
-      >
-        <Text style={styles.logoutText}>ออกจากระบบ</Text>
+      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+        <Text style={styles.logoutText}>🚪 ออกจากระบบ</Text>
       </TouchableOpacity>
+
+      <View style={{ height: 40 }} />
     </ScrollView>
   )
 }
@@ -43,7 +49,7 @@ const styles = StyleSheet.create({
   header: { backgroundColor: Colors.primary, padding: 32, alignItems: "center", paddingTop: 48 },
   avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: "rgba(255,255,255,0.2)", justifyContent: "center", alignItems: "center", marginBottom: 12 },
   avatarText: { fontSize: 36 },
-  name: { color: Colors.white, fontSize: 22, fontWeight: "bold" },
+  name: { color: Colors.white, fontSize: 22, fontWeight: "bold", textTransform: "capitalize" },
   email: { color: "rgba(255,255,255,0.8)", fontSize: 13, marginTop: 4 },
   menuItem: { backgroundColor: Colors.card, marginHorizontal: 16, marginTop: 12, borderRadius: 14, padding: 16, flexDirection: "row", alignItems: "center" },
   menuIcon: { fontSize: 20, marginRight: 12 },
