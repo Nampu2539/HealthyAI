@@ -44,6 +44,10 @@ export default function TabLayout() {
         title: "Symptoms",
         tabBarIcon: ({ color }) => <Ionicons name="medical" size={22} color={color} />
       }} />
+      <Tabs.Screen name="prescription" options={{
+        title: "ยา",
+        tabBarIcon: ({ color }) => <Ionicons name="medical-outline" size={22} color={color} />
+      }} />
       <Tabs.Screen name="profile" options={{
         title: "Profile",
         tabBarIcon: ({ color }) => <Ionicons name="person" size={22} color={color} />
