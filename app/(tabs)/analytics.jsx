@@ -6,6 +6,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient"
 import { BarChart, PieChart, LineChart } from "react-native-chart-kit"
 import { Colors } from "../../constants/colors"
+import { fetchWithCache } from "../../services/cache"
 
 const BASE_URL = "https://healthy-ai.onrender.com"
 
@@ -14,7 +15,6 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
-
   const screenWidth = Dimensions.get("window").width
 
   useEffect(() => { fetchData() }, [])
@@ -22,7 +22,7 @@ export default function Analytics() {
   const fetchData = async () => {
     setError(null)
     try {
-      const a = await fetch(`${BASE_URL}/analytics`).then(r => r.json())
+      const a = await fetchWithCache(`${BASE_URL}/analytics`, 60000)
       setAnalytics(a)
     } catch (e) {
       setError("ไม่สามารถโหลดข้อมูลได้")
@@ -36,11 +36,10 @@ export default function Analytics() {
     setRefreshing(false)
   }
 
-  if (loading) return (
-    <View style={[styles.container, { padding: 20 }]}>
-      <View style={styles.skeletonCard} />
-      <View style={styles.skeletonCard} />
-      <View style={styles.skeletonCard} />
+  if (loading && !analytics) return (
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background }}>
+      <Text style={{ fontSize: 48 }}>📊</Text>
+      <Text style={{ color: Colors.primary, fontWeight: "bold", fontSize: 16, marginTop: 12 }}>กำลังโหลด...</Text>
     </View>
   )
 
@@ -63,12 +62,7 @@ export default function Analytics() {
 
   const barData = {
     labels: ["Wellness", "Sleep"],
-    datasets: [{
-      data: [
-        analytics?.avg_wellness ?? 0,
-        analytics?.avg_sleep ?? 0,
-      ]
-    }]
+    datasets: [{ data: [analytics?.avg_wellness ?? 0, analytics?.avg_sleep ?? 0] }]
   }
 
   const lineData = {
@@ -84,18 +78,14 @@ export default function Analytics() {
     <View style={{ flex: 1 }}>
       <ScrollView
         style={styles.container}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <LinearGradient colors={[Colors.primary, "#15803D"]} style={styles.header}>
           <Text style={styles.greeting}>ภาพรวมทั้งหมด 📊</Text>
           <Text style={styles.headerTitle}>Population Analytics</Text>
         </LinearGradient>
 
-        {/* Summary Cards */}
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
             <Text style={styles.summaryValue}>{analytics?.total_users}</Text>
@@ -111,7 +101,6 @@ export default function Analytics() {
           </View>
         </View>
 
-        {/* Bar Chart — Average Scores */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📈 Average Health Scores</Text>
           <BarChart
@@ -128,21 +117,18 @@ export default function Analytics() {
               color: (opacity = 1) => `rgba(22,163,74,${opacity})`,
               labelColor: () => Colors.text,
               formatTopBarValue: (value) => value.toFixed(1),
-           }}
-           style={{ borderRadius: 16, marginTop: 8 }}
-           />
+            }}
+            style={{ borderRadius: 16, marginTop: 8 }}
+          />
         </View>
 
-        {/* Pie Chart — User Segments */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🥧 User Segments</Text>
           <PieChart
             data={segmentData}
             width={screenWidth - 64}
             height={200}
-            chartConfig={{
-              color: (opacity = 1) => `rgba(22,163,74,${opacity})`,
-            }}
+            chartConfig={{ color: (opacity = 1) => `rgba(22,163,74,${opacity})` }}
             accessor="population"
             backgroundColor="transparent"
             paddingLeft="16"
@@ -150,7 +136,6 @@ export default function Analytics() {
           />
         </View>
 
-        {/* Line Chart — Segment Distribution */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📉 Segment Distribution</Text>
           <LineChart
@@ -170,7 +155,6 @@ export default function Analytics() {
           />
         </View>
 
-        {/* Insight */}
         <View style={styles.insightCard}>
           <Text style={styles.insightTitle}>💡 AI Insight</Text>
           <Text style={styles.insightText}>
@@ -201,6 +185,5 @@ const styles = StyleSheet.create({
   insightCard: { marginHorizontal: 16, marginTop: 0, borderRadius: 20, padding: 20, backgroundColor: "rgba(22,163,74,0.1)", borderWidth: 1, borderColor: "rgba(22,163,74,0.3)" },
   insightTitle: { fontWeight: "bold", marginBottom: 6, color: Colors.primary },
   insightText: { color: Colors.text, lineHeight: 22 },
-  skeletonCard: { height: 120, backgroundColor: "#E2E8F0", borderRadius: 16, marginBottom: 16 },
   retryBtn: { backgroundColor: Colors.primary, borderRadius: 12, padding: 12, marginTop: 12 },
 })

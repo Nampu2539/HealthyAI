@@ -7,6 +7,7 @@ import { LinearGradient } from "expo-linear-gradient"
 import { BarChart } from "react-native-chart-kit"
 import { useRouter } from "expo-router"
 import { Colors } from "../../constants/colors"
+import { fetchWithCache } from "../../services/cache"
 
 const BASE_URL = "https://healthy-ai.onrender.com"
 
@@ -63,8 +64,8 @@ export default function Dashboard() {
     setError(null)
     try {
       const [u, a] = await Promise.all([
-        fetch(`${BASE_URL}/user/${userId}`).then(r => r.json()),
-        fetch(`${BASE_URL}/analytics`).then(r => r.json())
+        fetchWithCache(`${BASE_URL}/user/${userId}`, 30000),
+        fetchWithCache(`${BASE_URL}/analytics`, 60000)
       ])
       setUser(u)
       setAnalytics(a)
@@ -80,11 +81,15 @@ export default function Dashboard() {
     setRefreshing(false)
   }
 
-  if (loading) return (
-    <View style={[styles.container, { padding: 20, backgroundColor: theme.bg }]}>
-      <View style={styles.skeletonCard} />
-      <View style={styles.skeletonCard} />
-      <View style={styles.skeletonCard} />
+  if (loading && !user) return (
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: theme.bg }}>
+      <Text style={{ fontSize: 48 }}>🌿</Text>
+      <Text style={{ color: Colors.primary, fontWeight: "bold", fontSize: 16, marginTop: 12 }}>
+        กำลังโหลด...
+      </Text>
+      <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 4 }}>
+        รอสักครู่นะครับ
+      </Text>
     </View>
   )
 
@@ -129,7 +134,6 @@ export default function Dashboard() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <LinearGradient colors={[Colors.primary, "#15803D"]} style={styles.header}>
           <Text style={styles.greeting}>สวัสดี 👋</Text>
           <Text style={styles.headerTitle}>HealthyAI Dashboard</Text>
@@ -140,27 +144,19 @@ export default function Dashboard() {
 
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
 
-          {/* User Selector */}
           <View style={[styles.card, { backgroundColor: theme.card }]}>
             <Text style={{ color: theme.muted, marginBottom: 8, textAlign: "center" }}>เลือก User</Text>
             <View style={styles.selectorRow}>
-              <TouchableOpacity
-                style={styles.selectorBtn}
-                onPress={() => setUserId(Math.max(0, userId - 1))}
-              >
+              <TouchableOpacity style={styles.selectorBtn} onPress={() => setUserId(Math.max(0, userId - 1))}>
                 <Text style={styles.selectorBtnText}>◀</Text>
               </TouchableOpacity>
               <Text style={[styles.selectorValue, { color: theme.text }]}>{userId}</Text>
-              <TouchableOpacity
-                style={styles.selectorBtn}
-                onPress={() => setUserId(userId + 1)}
-              >
+              <TouchableOpacity style={styles.selectorBtn} onPress={() => setUserId(userId + 1)}>
                 <Text style={styles.selectorBtnText}>▶</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Score Card */}
           <View style={[styles.card, { backgroundColor: theme.card }]}>
             <Text style={{ color: theme.muted, fontSize: 14 }}>Overall Wellness Score</Text>
             <Text style={[styles.bigScore, { color: Colors.primary }]}>
@@ -173,7 +169,6 @@ export default function Dashboard() {
             </Text>
           </View>
 
-          {/* AI Insight */}
           <View style={styles.aiCard}>
             <Text style={styles.aiTitle}>🤖 AI Insight</Text>
             <Text style={styles.aiText}>
@@ -183,11 +178,8 @@ export default function Dashboard() {
             </Text>
           </View>
 
-          {/* Metric Bars */}
           <View style={[styles.card, { backgroundColor: theme.card }]}>
-            <Text style={{ color: theme.text, fontWeight: "bold", marginBottom: 16 }}>
-              💪 Health Metrics
-            </Text>
+            <Text style={{ color: theme.text, fontWeight: "bold", marginBottom: 16 }}>💪 Health Metrics</Text>
             {metrics.map((item) => {
               const val = user?.[item.key] ?? 0
               const barColor = val >= 70 ? Colors.primary : val >= 50 ? Colors.warning : Colors.danger
@@ -198,23 +190,15 @@ export default function Dashboard() {
                     <Text style={{ color: barColor, fontWeight: "bold" }}>{val?.toFixed(2)}</Text>
                   </View>
                   <View style={{ height: 10, backgroundColor: Colors.border, borderRadius: 5 }}>
-                    <View style={{
-                      height: 10,
-                      width: `${val}%`,
-                      backgroundColor: barColor,
-                      borderRadius: 5
-                    }} />
+                    <View style={{ height: 10, width: `${val}%`, backgroundColor: barColor, borderRadius: 5 }} />
                   </View>
                 </View>
               )
             })}
           </View>
 
-          {/* Bar Chart */}
           <View style={[styles.card, { backgroundColor: theme.card }]}>
-            <Text style={{ color: theme.text, fontWeight: "bold", marginBottom: 8 }}>
-              📊 Health Overview
-            </Text>
+            <Text style={{ color: theme.text, fontWeight: "bold", marginBottom: 8 }}>📊 Health Overview</Text>
             <BarChart
               data={chartData}
               width={screenWidth - 64}
@@ -234,29 +218,20 @@ export default function Dashboard() {
             />
           </View>
 
-          {/* Stats */}
           {analytics && (
             <View style={[styles.card, { backgroundColor: theme.card }]}>
-              <Text style={{ color: theme.text, fontWeight: "bold", marginBottom: 12 }}>
-                🌍 Population Stats
-              </Text>
+              <Text style={{ color: theme.text, fontWeight: "bold", marginBottom: 12 }}>🌍 Population Stats</Text>
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: Colors.primary }]}>
-                    {analytics.avg_wellness?.toFixed(2)}
-                  </Text>
+                  <Text style={[styles.statValue, { color: Colors.primary }]}>{analytics.avg_wellness?.toFixed(2)}</Text>
                   <Text style={{ color: theme.muted, fontSize: 12 }}>Avg Wellness</Text>
                 </View>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: Colors.primary }]}>
-                    {analytics.avg_sleep?.toFixed(2)}
-                  </Text>
+                  <Text style={[styles.statValue, { color: Colors.primary }]}>{analytics.avg_sleep?.toFixed(2)}</Text>
                   <Text style={{ color: theme.muted, fontSize: 12 }}>Avg Sleep</Text>
                 </View>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: Colors.primary }]}>
-                    {analytics.total_users}
-                  </Text>
+                  <Text style={[styles.statValue, { color: Colors.primary }]}>{analytics.total_users}</Text>
                   <Text style={{ color: theme.muted, fontSize: 12 }}>Total Users</Text>
                 </View>
               </View>
@@ -267,12 +242,8 @@ export default function Dashboard() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* FAB */}
       <Animated.View style={[styles.fabWrap, { transform: [{ scale: pulseAnim }] }]}>
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() => router.push("/(tabs)/recommendations")}
-        >
+        <TouchableOpacity style={styles.fab} onPress={() => router.push("/(tabs)/recommendations")}>
           <Text style={styles.fabText}>🤖</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -292,7 +263,6 @@ const styles = StyleSheet.create({
   aiCard: { marginHorizontal: 16, marginTop: 0, borderRadius: 20, padding: 20, backgroundColor: "rgba(22,163,74,0.1)", borderWidth: 1, borderColor: "rgba(22,163,74,0.3)" },
   aiTitle: { fontWeight: "bold", marginBottom: 6, color: Colors.primary },
   aiText: { color: Colors.text, lineHeight: 22 },
-  skeletonCard: { height: 120, backgroundColor: "#E2E8F0", borderRadius: 16, marginBottom: 16 },
   selectorRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 24 },
   selectorBtn: { backgroundColor: Colors.border, borderRadius: 10, padding: 10 },
   selectorBtnText: { color: Colors.primary, fontWeight: "bold", fontSize: 16 },
