@@ -40,22 +40,17 @@ export default function TabLayout() {
         title: "Analytics",
         tabBarIcon: ({ color }) => <Ionicons name="bar-chart" size={22} color={color} />
       }} />
-      <Tabs.Screen name="symptom" options={{
-        title: "Symptoms",
-        tabBarIcon: ({ color }) => <Ionicons name="medical" size={22} color={color} />
-      }} />
-      <Tabs.Screen name="prescription" options={{
-        title: "ยา",
-        tabBarIcon: ({ color }) => <Ionicons name="medical-outline" size={22} color={color} />
-      }} />
-      <Tabs.Screen name="monitoring" options={{
-        title: "Monitor",
-        tabBarIcon: ({ color }) => <Ionicons name="heart-outline" size={22} color={color} />
+      <Tabs.Screen name="foodscan" options={{
+        title: "Food AI",
+        tabBarIcon: ({ color }) => <Ionicons name="camera" size={22} color={color} />
       }} />
       <Tabs.Screen name="profile" options={{
         title: "Profile",
         tabBarIcon: ({ color }) => <Ionicons name="person" size={22} color={color} />
       }} />
+      <Tabs.Screen name="symptom" options={{ href: null }} />
+      <Tabs.Screen name="prescription" options={{ href: null }} />
+      <Tabs.Screen name="monitoring" options={{ href: null }} />
     </Tabs>
   )
 }
