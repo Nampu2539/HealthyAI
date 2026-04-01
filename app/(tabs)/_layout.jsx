@@ -1,21 +1,8 @@
-import { Tabs, useRouter } from "expo-router"
-import { useEffect } from "react"
+import { Tabs } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { Colors } from "../../constants/colors"
-import { useAuth } from "../../context/AuthContext"
 
 export default function TabLayout() {
-  const { user } = useAuth()
-  const router = useRouter()
-
-  useEffect(() => {
-    if (!user) {
-      router.replace("/")
-    }
-  }, [user])
-
-  if (!user) return null
-
   return (
     <Tabs screenOptions={{
       tabBarStyle: {
