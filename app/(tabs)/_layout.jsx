@@ -8,6 +8,7 @@ export default function TabLayout() {
       tabBarStyle: {
         backgroundColor: Colors.white,
         borderTopColor: Colors.border,
+        borderTopWidth: 0.5,
         height: 60,
         paddingBottom: 8,
       },
@@ -31,13 +32,13 @@ export default function TabLayout() {
         title: "Food AI",
         tabBarIcon: ({ color }) => <Ionicons name="camera" size={22} color={color} />
       }} />
-      <Tabs.Screen name="profile" options={{
-        title: "Profile",
-        tabBarIcon: ({ color }) => <Ionicons name="person" size={22} color={color} />
-      }} />
       <Tabs.Screen name="myhealth" options={{
         title: "My Health",
         tabBarIcon: ({ color }) => <Ionicons name="heart" size={22} color={color} />
+      }} />
+      <Tabs.Screen name="profile" options={{
+        title: "Profile",
+        tabBarIcon: ({ color }) => <Ionicons name="person" size={22} color={color} />
       }} />
       <Tabs.Screen name="symptom" options={{ href: null }} />
       <Tabs.Screen name="prescription" options={{ href: null }} />

@@ -1,15 +1,20 @@
 export const Colors = {
-  primary: "#16A34A",
-  primaryLight: "#22C55E",
-  primaryDark: "#15803D",
-  background: "#F0FDF4",
+  primary: "#1B3A6B",
+  primaryLight: "#378ADD",
+  primaryDark: "#0F2548",
+
+  background: "#F0F4F8",
   card: "#FFFFFF",
-  border: "#DCFCE7",
-  text: "#14532D",
-  textMuted: "#6B7280",
-  danger: "#EF4444",
-  warning: "#F59E0B",
-  success: "#16A34A",
+  border: "#D6E0EF",
+
+  text: "#1A2744",
+  textMuted: "#5A7096",
   white: "#FFFFFF",
-  dark: "#111827",
+
+  success: "#1D9E75",
+  warning: "#BA7517",
+  danger: "#A32D2D",
+
+  accent: "#378ADD",
+  accentLight: "#E6F1FB",
 }

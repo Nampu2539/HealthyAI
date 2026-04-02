@@ -18,7 +18,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
-  const [darkMode, setDarkMode] = useState(false)
   const [userId, setUserId] = useState(0)
   const [displayScore, setDisplayScore] = useState(0)
 
@@ -28,10 +27,6 @@ export default function Dashboard() {
   const animatedScore = useRef(new Animated.Value(0)).current
   const pulseAnim = useRef(new Animated.Value(1)).current
 
-  const theme = darkMode
-    ? { bg: "#0F172A", card: "#1E293B", text: "#F1F5F9", muted: "#94A3B8" }
-    : { bg: Colors.background, card: Colors.card, text: Colors.text, muted: Colors.textMuted }
-
   useEffect(() => { fetchData() }, [userId])
 
   useEffect(() => {
@@ -39,7 +34,6 @@ export default function Dashboard() {
       Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true })
     ]).start()
-
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.1, duration: 800, useNativeDriver: true }),
@@ -82,14 +76,10 @@ export default function Dashboard() {
   }
 
   if (loading && !user) return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: theme.bg }}>
-      <Text style={{ fontSize: 48 }}>🌿</Text>
-      <Text style={{ color: Colors.primary, fontWeight: "bold", fontSize: 16, marginTop: 12 }}>
-        กำลังโหลด...
-      </Text>
-      <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 4 }}>
-        รอสักครู่นะครับ
-      </Text>
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background }}>
+      <Text style={{ fontSize: 48 }}>🏥</Text>
+      <Text style={{ color: Colors.primary, fontWeight: "bold", fontSize: 16, marginTop: 12 }}>กำลังโหลด...</Text>
+      <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 4 }}>รอสักครู่นะครับ</Text>
     </View>
   )
 
@@ -128,37 +118,32 @@ export default function Dashboard() {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
-        style={[styles.container, { backgroundColor: theme.bg }]}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
-        }
+        style={[styles.container, { backgroundColor: Colors.background }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
         showsVerticalScrollIndicator={false}
       >
-        <LinearGradient colors={[Colors.primary, "#15803D"]} style={styles.header}>
+        <LinearGradient colors={[Colors.primary, Colors.primaryDark]} style={styles.header}>
           <Text style={styles.greeting}>สวัสดี 👋</Text>
           <Text style={styles.headerTitle}>HealthyAI Dashboard</Text>
-          <TouchableOpacity onPress={() => setDarkMode(!darkMode)} style={styles.darkBtn}>
-            <Text style={{ fontSize: 20 }}>{darkMode ? "🌙" : "☀️"}</Text>
-          </TouchableOpacity>
         </LinearGradient>
 
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
 
-          <View style={[styles.card, { backgroundColor: theme.card }]}>
-            <Text style={{ color: theme.muted, marginBottom: 8, textAlign: "center" }}>เลือก User</Text>
+          <View style={styles.card}>
+            <Text style={{ color: Colors.textMuted, marginBottom: 8, textAlign: "center" }}>เลือก User</Text>
             <View style={styles.selectorRow}>
               <TouchableOpacity style={styles.selectorBtn} onPress={() => setUserId(Math.max(0, userId - 1))}>
                 <Text style={styles.selectorBtnText}>◀</Text>
               </TouchableOpacity>
-              <Text style={[styles.selectorValue, { color: theme.text }]}>{userId}</Text>
+              <Text style={[styles.selectorValue, { color: Colors.text }]}>{userId}</Text>
               <TouchableOpacity style={styles.selectorBtn} onPress={() => setUserId(userId + 1)}>
                 <Text style={styles.selectorBtnText}>▶</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          <View style={[styles.card, { backgroundColor: theme.card }]}>
-            <Text style={{ color: theme.muted, fontSize: 14 }}>Overall Wellness Score</Text>
+          <View style={styles.card}>
+            <Text style={{ color: Colors.textMuted, fontSize: 14 }}>Overall Wellness Score</Text>
             <Text style={[styles.bigScore, { color: Colors.primary }]}>
               {displayScore.toFixed(2)}
             </Text>
@@ -178,15 +163,15 @@ export default function Dashboard() {
             </Text>
           </View>
 
-          <View style={[styles.card, { backgroundColor: theme.card }]}>
-            <Text style={{ color: theme.text, fontWeight: "bold", marginBottom: 16 }}>💪 Health Metrics</Text>
+          <View style={styles.card}>
+            <Text style={{ color: Colors.text, fontWeight: "bold", marginBottom: 16 }}>💪 Health Metrics</Text>
             {metrics.map((item) => {
               const val = user?.[item.key] ?? 0
-              const barColor = val >= 70 ? Colors.primary : val >= 50 ? Colors.warning : Colors.danger
+              const barColor = val >= 70 ? Colors.success : val >= 50 ? Colors.warning : Colors.danger
               return (
                 <View key={item.key} style={{ marginBottom: 14 }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
-                    <Text style={{ color: theme.text, fontSize: 14 }}>{item.label}</Text>
+                    <Text style={{ color: Colors.text, fontSize: 14 }}>{item.label}</Text>
                     <Text style={{ color: barColor, fontWeight: "bold" }}>{val?.toFixed(2)}</Text>
                   </View>
                   <View style={{ height: 10, backgroundColor: Colors.border, borderRadius: 5 }}>
@@ -197,8 +182,8 @@ export default function Dashboard() {
             })}
           </View>
 
-          <View style={[styles.card, { backgroundColor: theme.card }]}>
-            <Text style={{ color: theme.text, fontWeight: "bold", marginBottom: 8 }}>📊 Health Overview</Text>
+          <View style={styles.card}>
+            <Text style={{ color: Colors.text, fontWeight: "bold", marginBottom: 8 }}>📊 Health Overview</Text>
             <BarChart
               data={chartData}
               width={screenWidth - 64}
@@ -207,11 +192,11 @@ export default function Dashboard() {
               fromZero
               showValuesOnTopOfBars
               chartConfig={{
-                backgroundGradientFrom: theme.card,
-                backgroundGradientTo: theme.card,
+                backgroundGradientFrom: Colors.card,
+                backgroundGradientTo: Colors.card,
                 decimalPlaces: 1,
-                color: (opacity = 1) => `rgba(22,163,74,${opacity})`,
-                labelColor: () => theme.text,
+                color: (opacity = 1) => `rgba(27,58,107,${opacity})`,
+                labelColor: () => Colors.text,
                 formatTopBarValue: (value) => value.toFixed(1),
               }}
               style={{ marginTop: 8, borderRadius: 16 }}
@@ -219,20 +204,20 @@ export default function Dashboard() {
           </View>
 
           {analytics && (
-            <View style={[styles.card, { backgroundColor: theme.card }]}>
-              <Text style={{ color: theme.text, fontWeight: "bold", marginBottom: 12 }}>🌍 Population Stats</Text>
+            <View style={styles.card}>
+              <Text style={{ color: Colors.text, fontWeight: "bold", marginBottom: 12 }}>🌍 Population Stats</Text>
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
                   <Text style={[styles.statValue, { color: Colors.primary }]}>{analytics.avg_wellness?.toFixed(2)}</Text>
-                  <Text style={{ color: theme.muted, fontSize: 12 }}>Avg Wellness</Text>
+                  <Text style={{ color: Colors.textMuted, fontSize: 12 }}>Avg Wellness</Text>
                 </View>
                 <View style={styles.statItem}>
                   <Text style={[styles.statValue, { color: Colors.primary }]}>{analytics.avg_sleep?.toFixed(2)}</Text>
-                  <Text style={{ color: theme.muted, fontSize: 12 }}>Avg Sleep</Text>
+                  <Text style={{ color: Colors.textMuted, fontSize: 12 }}>Avg Sleep</Text>
                 </View>
                 <View style={styles.statItem}>
                   <Text style={[styles.statValue, { color: Colors.primary }]}>{analytics.total_users}</Text>
-                  <Text style={{ color: theme.muted, fontSize: 12 }}>Total Users</Text>
+                  <Text style={{ color: Colors.textMuted, fontSize: 12 }}>Total Users</Text>
                 </View>
               </View>
             </View>
@@ -255,12 +240,11 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: { padding: 24, paddingTop: 48, paddingBottom: 32 },
-  greeting: { color: "rgba(255,255,255,0.8)", fontSize: 14 },
+  greeting: { color: "rgba(255,255,255,0.75)", fontSize: 14 },
   headerTitle: { color: "#fff", fontSize: 22, fontWeight: "bold", marginTop: 4 },
-  darkBtn: { position: "absolute", right: 20, top: 48 },
-  card: { margin: 16, borderRadius: 20, padding: 20, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 12, elevation: 6 },
+  card: { backgroundColor: Colors.card, margin: 16, marginBottom: 0, borderRadius: 16, padding: 20, shadowColor: "#1B3A6B", shadowOpacity: 0.08, shadowRadius: 12, elevation: 3, borderWidth: 0.5, borderColor: Colors.border },
   bigScore: { fontSize: 72, fontWeight: "bold" },
-  aiCard: { marginHorizontal: 16, marginTop: 0, borderRadius: 20, padding: 20, backgroundColor: "rgba(22,163,74,0.1)", borderWidth: 1, borderColor: "rgba(22,163,74,0.3)" },
+  aiCard: { marginHorizontal: 16, marginTop: 12, borderRadius: 16, padding: 20, backgroundColor: Colors.accentLight, borderWidth: 1, borderColor: "#B5D4F4" },
   aiTitle: { fontWeight: "bold", marginBottom: 6, color: Colors.primary },
   aiText: { color: Colors.text, lineHeight: 22 },
   selectorRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 24 },
