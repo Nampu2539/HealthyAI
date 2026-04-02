@@ -35,6 +35,10 @@ export default function TabLayout() {
         title: "Profile",
         tabBarIcon: ({ color }) => <Ionicons name="person" size={22} color={color} />
       }} />
+      <Tabs.Screen name="myhealth" options={{
+        title: "My Health",
+        tabBarIcon: ({ color }) => <Ionicons name="heart" size={22} color={color} />
+      }} />
       <Tabs.Screen name="symptom" options={{ href: null }} />
       <Tabs.Screen name="prescription" options={{ href: null }} />
       <Tabs.Screen name="monitoring" options={{ href: null }} />
