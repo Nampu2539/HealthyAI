@@ -32,14 +32,13 @@ export default function TabLayout() {
         title: "Food AI",
         tabBarIcon: ({ color }) => <Ionicons name="camera" size={22} color={color} />
       }} />
-      <Tabs.Screen name="myhealth" options={{
-        title: "My Health",
-        tabBarIcon: ({ color }) => <Ionicons name="heart" size={22} color={color} />
-      }} />
       <Tabs.Screen name="profile" options={{
         title: "Profile",
         tabBarIcon: ({ color }) => <Ionicons name="person" size={22} color={color} />
       }} />
+
+      {/* Hidden from tab bar — merged into Dashboard */}
+      <Tabs.Screen name="myhealth" options={{ href: null }} />
       <Tabs.Screen name="symptom" options={{ href: null }} />
       <Tabs.Screen name="prescription" options={{ href: null }} />
       <Tabs.Screen name="monitoring" options={{ href: null }} />
