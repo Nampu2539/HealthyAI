@@ -24,40 +24,34 @@ export default function Analytics() {
     try {
       const a = await fetchWithCache(`${BASE_URL}/analytics`, 60000)
       setAnalytics(a)
-    } catch (e) {
-      setError("ไม่สามารถโหลดข้อมูลได้")
-    }
+    } catch { setError("ไม่สามารถโหลดข้อมูลได้") }
     setLoading(false)
   }
 
-  const onRefresh = async () => {
-    setRefreshing(true)
-    await fetchData()
-    setRefreshing(false)
-  }
+  const onRefresh = async () => { setRefreshing(true); await fetchData(); setRefreshing(false) }
 
   if (loading && !analytics) return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background }}>
-      <Text style={{ fontSize: 48 }}>📊</Text>
-      <Text style={{ color: Colors.primary, fontWeight: "bold", fontSize: 16, marginTop: 12 }}>กำลังโหลด...</Text>
+    <View style={styles.loadingContainer}>
+      <View style={styles.loadingIconWrap}><Text style={{ fontSize: 36 }}>📊</Text></View>
+      <Text style={styles.loadingText}>กำลังโหลด...</Text>
     </View>
   )
 
   if (error) return (
-    <View style={styles.center}>
+    <View style={styles.loadingContainer}>
       <Text style={{ color: Colors.danger }}>{error}</Text>
       <TouchableOpacity onPress={fetchData} style={styles.retryBtn}>
-        <Text style={{ color: Colors.white, fontWeight: "bold" }}>🔄 ลองใหม่</Text>
+        <Text style={{ color: "#fff", fontWeight: "bold" }}>🔄 ลองใหม่</Text>
       </TouchableOpacity>
     </View>
   )
 
-  const segmentData = Object.entries(analytics?.segments ?? {}).map(([key, value], index) => ({
-    name: `Segment ${key}`,
+  const segmentData = Object.entries(analytics?.segments ?? {}).map(([key, value], i) => ({
+    name: `Seg ${key}`,
     population: value,
-    color: ["#16A34A", "#22C55E", "#4ADE80", "#86EFAC"][index] ?? "#ccc",
+    color: [Colors.primary, Colors.primaryLight, Colors.success, "#8b5cf6"][i] ?? "#ccc",
     legendFontColor: Colors.text,
-    legendFontSize: 13,
+    legendFontSize: 12,
   }))
 
   const barData = {
@@ -69,10 +63,16 @@ export default function Analytics() {
     labels: ["S1", "S2", "S3", "S4"],
     datasets: [{
       data: Object.values(analytics?.segments ?? {}).map(Number),
-      color: (opacity = 1) => `rgba(22,163,74,${opacity})`,
-      strokeWidth: 2
+      color: (opacity = 1) => `rgba(27,58,107,${opacity})`,
+      strokeWidth: 2,
     }]
   }
+
+  const summaryItems = [
+    { label: "Total Users", value: analytics?.total_users, emoji: "👥" },
+    { label: "Avg Wellness", value: analytics?.avg_wellness?.toFixed(1), emoji: "💚" },
+    { label: "Avg Sleep", value: analytics?.avg_sleep?.toFixed(1), emoji: "😴" },
+  ]
 
   return (
     <View style={{ flex: 1 }}>
@@ -81,61 +81,59 @@ export default function Analytics() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
         showsVerticalScrollIndicator={false}
       >
-        <LinearGradient colors={[Colors.primary, "#15803D"]} style={styles.header}>
-          <Text style={styles.greeting}>ภาพรวมทั้งหมด 📊</Text>
+        {/* Header */}
+        <LinearGradient colors={[Colors.primary, Colors.primaryDark]} style={styles.header}>
+          <Text style={styles.greeting}>ภาพรวมทั้งหมด</Text>
           <Text style={styles.headerTitle}>Population Analytics</Text>
+          <Text style={styles.headerSub}>ข้อมูลจากผู้ใช้ {analytics?.total_users ?? "—"} คน</Text>
         </LinearGradient>
 
+        {/* Summary Cards */}
         <View style={styles.summaryRow}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{analytics?.total_users}</Text>
-            <Text style={styles.summaryLabel}>Total Users</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{analytics?.avg_wellness?.toFixed(2)}</Text>
-            <Text style={styles.summaryLabel}>Avg Wellness</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{analytics?.avg_sleep?.toFixed(2)}</Text>
-            <Text style={styles.summaryLabel}>Avg Sleep</Text>
-          </View>
+          {summaryItems.map((s) => (
+            <View key={s.label} style={styles.summaryCard}>
+              <Text style={styles.summaryEmoji}>{s.emoji}</Text>
+              <Text style={styles.summaryValue}>{s.value}</Text>
+              <Text style={styles.summaryLabel}>{s.label}</Text>
+            </View>
+          ))}
         </View>
 
+        {/* Bar Chart */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📈 Average Health Scores</Text>
           <BarChart
             data={barData}
             width={screenWidth - 64}
             height={200}
-            yAxisSuffix=""
-            fromZero
-            showValuesOnTopOfBars
+            fromZero showValuesOnTopOfBars yAxisSuffix=""
             chartConfig={{
-              backgroundGradientFrom: Colors.card,
-              backgroundGradientTo: Colors.card,
+              backgroundGradientFrom: Colors.card, backgroundGradientTo: Colors.card,
               decimalPlaces: 1,
-              color: (opacity = 1) => `rgba(22,163,74,${opacity})`,
+              color: (o = 1) => `rgba(27,58,107,${o})`,
               labelColor: () => Colors.text,
-              formatTopBarValue: (value) => value.toFixed(1),
+              formatTopBarValue: (v) => v.toFixed(1),
             }}
-            style={{ borderRadius: 16, marginTop: 8 }}
+            style={{ borderRadius: 12, marginTop: 12 }}
           />
         </View>
 
+        {/* Pie Chart */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🥧 User Segments</Text>
           <PieChart
             data={segmentData}
             width={screenWidth - 64}
             height={200}
-            chartConfig={{ color: (opacity = 1) => `rgba(22,163,74,${opacity})` }}
+            chartConfig={{ color: (o = 1) => `rgba(27,58,107,${o})` }}
             accessor="population"
             backgroundColor="transparent"
             paddingLeft="16"
-            style={{ borderRadius: 16, marginTop: 8 }}
+            style={{ borderRadius: 12, marginTop: 8 }}
           />
         </View>
 
+        {/* Line Chart */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📉 Segment Distribution</Text>
           <LineChart
@@ -143,24 +141,27 @@ export default function Analytics() {
             width={screenWidth - 64}
             height={200}
             chartConfig={{
-              backgroundGradientFrom: Colors.card,
-              backgroundGradientTo: Colors.card,
+              backgroundGradientFrom: Colors.card, backgroundGradientTo: Colors.card,
               decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(22,163,74,${opacity})`,
+              color: (o = 1) => `rgba(27,58,107,${o})`,
               labelColor: () => Colors.text,
-              propsForDots: { r: "6", strokeWidth: "2", stroke: Colors.primary }
+              propsForDots: { r: "5", strokeWidth: "2", stroke: Colors.primary },
             }}
             bezier
-            style={{ borderRadius: 16, marginTop: 8 }}
+            style={{ borderRadius: 12, marginTop: 8 }}
           />
         </View>
 
+        {/* AI Insight */}
         <View style={styles.insightCard}>
-          <Text style={styles.insightTitle}>💡 AI Insight</Text>
+          <View style={styles.insightHeader}>
+            <View style={styles.insightDot} />
+            <Text style={styles.insightTitle}>AI Insight</Text>
+          </View>
           <Text style={styles.insightText}>
             {analytics?.avg_wellness >= 70
-              ? `ผู้ใช้ ${analytics?.total_users} คน มีสุขภาพโดยรวมดี คะแนนเฉลี่ย ${analytics?.avg_wellness?.toFixed(2)}/100`
-              : `ผู้ใช้ส่วนใหญ่ควรปรับปรุงด้านการนอนและออกกำลังกายให้มากขึ้น`}
+              ? `ผู้ใช้ ${analytics?.total_users} คน มีสุขภาพโดยรวมดี คะแนนเฉลี่ย ${analytics?.avg_wellness?.toFixed(1)}/100 ครับ`
+              : "ผู้ใช้ส่วนใหญ่ควรปรับปรุงด้านการนอนและออกกำลังกายให้มากขึ้นครับ"}
           </Text>
         </View>
 
@@ -172,18 +173,24 @@ export default function Analytics() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  header: { padding: 24, paddingTop: 48, paddingBottom: 32 },
-  greeting: { color: "rgba(255,255,255,0.8)", fontSize: 14 },
-  headerTitle: { color: "#fff", fontSize: 22, fontWeight: "bold", marginTop: 4 },
-  summaryRow: { flexDirection: "row", margin: 16, gap: 8 },
-  summaryCard: { flex: 1, backgroundColor: Colors.card, borderRadius: 16, padding: 16, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  summaryValue: { fontSize: 22, fontWeight: "bold", color: Colors.primary },
-  summaryLabel: { color: Colors.textMuted, fontSize: 11, marginTop: 4, textAlign: "center" },
-  card: { backgroundColor: Colors.card, margin: 16, marginTop: 0, borderRadius: 20, padding: 20, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
-  cardTitle: { color: Colors.text, fontWeight: "bold", fontSize: 15 },
-  insightCard: { marginHorizontal: 16, marginTop: 0, borderRadius: 20, padding: 20, backgroundColor: "rgba(22,163,74,0.1)", borderWidth: 1, borderColor: "rgba(22,163,74,0.3)" },
-  insightTitle: { fontWeight: "bold", marginBottom: 6, color: Colors.primary },
-  insightText: { color: Colors.text, lineHeight: 22 },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background },
+  loadingIconWrap: { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accentLight, justifyContent: "center", alignItems: "center", marginBottom: 14 },
+  loadingText: { color: Colors.primary, fontWeight: "bold", fontSize: 15 },
   retryBtn: { backgroundColor: Colors.primary, borderRadius: 12, padding: 12, marginTop: 12 },
+  header: { padding: 24, paddingTop: 52, paddingBottom: 36 },
+  greeting: { color: "rgba(255,255,255,0.7)", fontSize: 13 },
+  headerTitle: { color: "#fff", fontSize: 24, fontWeight: "bold", marginTop: 2 },
+  headerSub: { color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 4 },
+  summaryRow: { flexDirection: "row", margin: 16, gap: 10 },
+  summaryCard: { flex: 1, backgroundColor: Colors.card, borderRadius: 16, padding: 14, alignItems: "center", elevation: 3, borderWidth: 0.5, borderColor: Colors.border },
+  summaryEmoji: { fontSize: 22, marginBottom: 4 },
+  summaryValue: { fontSize: 20, fontWeight: "bold", color: Colors.primary },
+  summaryLabel: { color: Colors.textMuted, fontSize: 10, marginTop: 3, textAlign: "center" },
+  card: { backgroundColor: Colors.card, marginHorizontal: 16, marginBottom: 12, borderRadius: 16, padding: 18, elevation: 2, borderWidth: 0.5, borderColor: Colors.border },
+  cardTitle: { color: Colors.text, fontWeight: "bold", fontSize: 14 },
+  insightCard: { backgroundColor: Colors.accentLight, marginHorizontal: 16, marginBottom: 12, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: Colors.border },
+  insightHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
+  insightDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primaryLight },
+  insightTitle: { color: Colors.primary, fontWeight: "bold", fontSize: 13 },
+  insightText: { color: Colors.text, lineHeight: 22, fontSize: 13 },
 })
