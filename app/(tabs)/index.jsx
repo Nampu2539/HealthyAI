@@ -5,6 +5,7 @@ import {
   RefreshControl, TextInput, ActivityIndicator,
   KeyboardAvoidingView, Platform
 } from "react-native"
+import AsyncStorage from "@react-native-async-storage/async-storage"
 import { LinearGradient } from "expo-linear-gradient"
 import { BarChart } from "react-native-chart-kit"
 import Svg, { Circle } from "react-native-svg"
@@ -164,17 +165,22 @@ export default function Dashboard() {
 
   const tabKeys = ["overview", "mystats", "population"]
 
-  // โหลด localStorage ตอน mount
+  // โหลด AsyncStorage ตอน mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("healthForm")
-      const savedResult = localStorage.getItem("healthResult")
-      if (saved) setHealthForm(JSON.parse(saved))
-      if (savedResult) {
-        setHealthResult(JSON.parse(savedResult))
-        setFormSubmitted(true)
+    const loadData = async () => {
+      try {
+        const saved = await AsyncStorage.getItem("healthForm")
+        const savedResult = await AsyncStorage.getItem("healthResult")
+        if (saved) setHealthForm(JSON.parse(saved))
+        if (savedResult) {
+          setHealthResult(JSON.parse(savedResult))
+          setFormSubmitted(true)
+        }
+      } catch (err) {
+        console.error("Error loading data:", err)
       }
-    } catch {}
+    }
+    loadData()
   }, [])
 
   useEffect(() => { fetchData() }, [userId])
@@ -247,8 +253,8 @@ export default function Dashboard() {
       const result = await res.json()
       setHealthResult(result)
       setFormSubmitted(true)
-      localStorage.setItem("healthForm", JSON.stringify(healthForm))
-      localStorage.setItem("healthResult", JSON.stringify(result))
+      await AsyncStorage.setItem("healthForm", JSON.stringify(healthForm))
+      await AsyncStorage.setItem("healthResult", JSON.stringify(result))
     } catch {
       setHealthError("ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่")
     }
@@ -634,10 +640,10 @@ export default function Dashboard() {
 
                     <TouchableOpacity
                       style={styles.ghostBtn}
-                      onPress={() => {
+                      onPress={async () => {
                         setFormSubmitted(false)
                         setHealthResult(null)
-                        localStorage.removeItem("healthResult")
+                        await AsyncStorage.removeItem("healthResult")
                       }}
                       activeOpacity={0.7}
                     >
