@@ -33,7 +33,10 @@ export default function FoodScan() {
     }
   }
 
-  const analyzeFood = async (base64Data) => {
+  const analyzeFood = async (base64Data, retryCount = 0) => {
+    const MAX_RETRIES = 3
+    const BASE_DELAY = 2000 // 2 seconds
+    
     setLoading(true); setResult(null); setError(null)
     try {
       const res = await fetch(`${BASE_URL}/analyze-food`, {
@@ -41,12 +44,22 @@ export default function FoodScan() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: base64Data }),
       })
+      
       if (!res.ok) {
+        // If 503 (Google API overloaded) and we haven't maxed retries, retry with backoff
+        if (res.status === 503 && retryCount < MAX_RETRIES) {
+          const delay = BASE_DELAY * Math.pow(2, retryCount) // Exponential backoff
+          setError(`AI ยุ่งอยู่ (ครั้งที่ ${retryCount + 1}/${MAX_RETRIES})... รอสักครู่`)
+          setTimeout(() => analyzeFood(base64Data, retryCount + 1), delay)
+          return
+        }
         throw new Error(`Server error: ${res.status} ${res.statusText}`)
       }
+      
       const data = await res.json()
       validateFoodResult(data)
       setResult(data.result)
+      setError(null)
     } catch (err) {
       setError(`ไม่สามารถวิเคราะห์ได้: ${err.message}`)
     }

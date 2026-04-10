@@ -14,6 +14,9 @@ import { Colors } from "../../constants/colors"
 import { fetchWithCache } from "../../services/cache"
 import { BASE_URL } from "../../config/api"
 
+// Create animated SVG Circle for score ring animation
+const AnimatedCircle = Animated.createAnimatedComponent(Circle)
+
 // ── Form Progress Bar ────────────────────────────────────────────────────────
 function FormProgress({ step, total }) {
   const pct = Math.round((step / total) * 100)
