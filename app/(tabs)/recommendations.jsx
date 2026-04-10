@@ -6,8 +6,8 @@ import {
 } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import { Colors } from "../../constants/colors"
-
-const BASE_URL = "https://healthy-ai.onrender.com"
+import { BASE_URL } from "../../config/api"
+import { validateChatReply } from "../../services/validation"
 
 const QUICK_QUESTIONS = [
   { label: "💪 ออกกำลังกาย", text: "วิธีออกกำลังกายที่ดีสำหรับมือใหม่" },
@@ -41,10 +41,12 @@ export default function AIChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.text })) })
       })
+      if (!res.ok) throw new Error(`Server error: ${res.status} ${res.statusText}`)
       const data = await res.json()
+      validateChatReply(data)
       setMessages(prev => [...prev, { role: "assistant", text: data.reply }])
-    } catch {
-      setMessages(prev => [...prev, { role: "assistant", text: "❌ ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่ครับ" }])
+    } catch (err) {
+      setMessages(prev => [...prev, { role: "assistant", text: `❌ ${err.message || "ไม่สามารถเชื่อมต่อได้"}` }])
     }
     setLoading(false)
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)

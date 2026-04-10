@@ -7,8 +7,7 @@ import { LinearGradient } from "expo-linear-gradient"
 import { BarChart, PieChart, LineChart } from "react-native-chart-kit"
 import { Colors } from "../../constants/colors"
 import { fetchWithCache } from "../../services/cache"
-
-const BASE_URL = "https://healthy-ai.onrender.com"
+import { BASE_URL } from "../../config/api"
 
 // ── Segment name mapping ─────────────────────────────────────────────────────
 // ปรับชื่อให้ตรงกับ segment จริงจาก API ได้ที่นี่
@@ -209,7 +208,9 @@ export default function Analytics() {
     try {
       const a = await fetchWithCache(`${BASE_URL}/analytics`, 60000)
       setAnalytics(a)
-    } catch { setError("ไม่สามารถโหลดข้อมูลได้") }
+    } catch (err) {
+      setError(`ไม่สามารถโหลดข้อมูลได้: ${err.message}`)
+    }
     setLoading(false)
   }
 

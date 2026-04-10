@@ -1,8 +1,8 @@
-const BACKEND_URL = "https://healthy-ai.onrender.com"
+import { BASE_URL } from "../config/api"
 
 export function startKeepAlive() {
-  fetch(`${BACKEND_URL}/`).catch(() => {})
+  fetch(`${BASE_URL}/`).catch(() => {})
   setInterval(() => {
-    fetch(`${BACKEND_URL}/`).catch(() => {})
+    fetch(`${BASE_URL}/`).catch(() => {})
   }, 10 * 60 * 1000)
 }

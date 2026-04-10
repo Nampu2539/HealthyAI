@@ -12,9 +12,7 @@ import Svg, { Circle } from "react-native-svg"
 import { useRouter } from "expo-router"
 import { Colors } from "../../constants/colors"
 import { fetchWithCache } from "../../services/cache"
-
-const AnimatedCircle = Animated.createAnimatedComponent(Circle)
-const BASE_URL = "https://healthy-ai.onrender.com"
+import { BASE_URL } from "../../config/api"
 
 // ── Form Progress Bar ────────────────────────────────────────────────────────
 function FormProgress({ step, total }) {
@@ -222,8 +220,8 @@ export default function Dashboard() {
       ])
       setUser(u)
       setAnalytics(a)
-    } catch {
-      setError("ไม่สามารถโหลดข้อมูลได้")
+    } catch (err) {
+      setError(`ไม่สามารถโหลดข้อมูลได้: ${err.message}`)
     }
     setLoading(false)
   }
@@ -250,13 +248,16 @@ export default function Dashboard() {
           activity_level: healthForm.activity_level, gender: healthForm.gender,
         }),
       })
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.status} ${res.statusText}`)
+      }
       const result = await res.json()
       setHealthResult(result)
       setFormSubmitted(true)
       await AsyncStorage.setItem("healthForm", JSON.stringify(healthForm))
       await AsyncStorage.setItem("healthResult", JSON.stringify(result))
-    } catch {
-      setHealthError("ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่")
+    } catch (err) {
+      setHealthError(`ไม่สามารถเชื่อมต่อได้: ${err.message}`)
     }
     setHealthLoading(false)
   }

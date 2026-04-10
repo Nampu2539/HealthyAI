@@ -3,10 +3,11 @@ import {
   View, Text, ScrollView, StyleSheet,
   TouchableOpacity, Image, ActivityIndicator
 } from "react-native"
+import * as ImagePicker from "expo-image-picker"
 import { LinearGradient } from "expo-linear-gradient"
 import { Colors } from "../../constants/colors"
-
-const BASE_URL = "https://healthy-ai.onrender.com"
+import { BASE_URL } from "../../config/api"
+import { validateFoodResult } from "../../services/validation"
 
 export default function FoodScan() {
   const [image, setImage] = useState(null)
@@ -16,22 +17,20 @@ export default function FoodScan() {
 
   const pickImage = async () => {
     try {
-      const input = document.createElement("input")
-      input.type = "file"
-      input.accept = "image/*"
-      input.onchange = async (e) => {
-        const file = e.target.files[0]
-        if (!file) return
-        const reader = new FileReader()
-        reader.onload = async (ev) => {
-          const base64 = ev.target.result
-          setImage(base64)
-          await analyzeFood(base64.split(",")[1])
-        }
-        reader.readAsDataURL(file)
-      }
-      input.click()
-    } catch { setError("ไม่สามารถเลือกรูปได้") }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: true,
+      })
+      if (result.cancelled || !result.assets?.[0]) return
+      const base64 = result.assets[0].base64
+      setImage(`data:image/jpeg;base64,${base64}`)
+      await analyzeFood(base64)
+    } catch (err) {
+      setError(`ไม่สามารถเลือกรูปได้: ${err.message}`)
+    }
   }
 
   const analyzeFood = async (base64Data) => {
@@ -42,9 +41,15 @@ export default function FoodScan() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: base64Data }),
       })
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.status} ${res.statusText}`)
+      }
       const data = await res.json()
+      validateFoodResult(data)
       setResult(data.result)
-    } catch { setError("ไม่สามารถวิเคราะห์ได้ กรุณาลองใหม่") }
+    } catch (err) {
+      setError(`ไม่สามารถวิเคราะห์ได้: ${err.message}`)
+    }
     setLoading(false)
   }
 
