@@ -1,9 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
-from google import genai
-from google.genai import types
-from google.genai.errors import ServerError, ClientError
 import base64
 import json
 import os
@@ -11,6 +8,20 @@ import hashlib
 import time
 from collections import defaultdict
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
+# ━━━ AI Provider Selection ━━━
+AI_PROVIDER = os.environ.get("AI_PROVIDER", "gemini")  # "gemini" or "groq"
+
+if AI_PROVIDER == "groq":
+    from groq import Groq
+    client_ai = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+    AI_MODEL = "llama-3.1-70b-versatile"
+else:  # gemini
+    from google import genai
+    from google.genai import types
+    from google.genai.errors import ServerError, ClientError
+    client_ai = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+    AI_MODEL = "gemini-2.5-flash"
 
 app = FastAPI()
 
@@ -95,52 +106,46 @@ SYSTEM_PROMPT = """คุณคือ "นพ.เอกชัย สุขสม
 ให้ข้อมูลและคำแนะนำเบื้องต้นได้เฉพาะเรื่องสุขภาพเท่านั้น ไม่วินิจฉัยโรคหรือสั่งยาโดยตรง ถ้าอาการน่าเป็นห่วงให้แนะนำพบแพทย์จริง ไม่แนะนำขนาดยาหรือการหยุดยาที่แพทย์สั่ง"""
 
 
-# ━━━ Retry Decorator for Gemini API calls ━━━
-def should_retry_gemini_error(exception):
-    """Only retry on ServerError (503), not on ClientError (429 rate limit)"""
-    if isinstance(exception, ServerError):
-        return True
-    return False
-
+# ━━━ Retry Decorator for AI API calls ━━━
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type(ServerError),
     reraise=True
 )
-def call_gemini_generate(model, contents, config):
-    """Helper function to call Gemini API with automatic retry on 503 errors only"""
-    return client_gemini.models.generate_content(
-        model=model,
-        contents=contents,
-        config=config
-    )
-
-
-def generate(messages):
-    history = []
-    for m in messages[:-1]:
-        role = "user" if m["role"] == "user" else "model"
-        history.append(types.Content(role=role, parts=[types.Part(text=m["content"])]))
-
-    last_msg = messages[-1]["content"] if messages else ""
-
-    try:
-        response = call_gemini_generate(
-            model=GEMINI_MODEL,
-            contents=history + [types.Content(role="user", parts=[types.Part(text=last_msg)])],
+def call_ai_generate(system_prompt, user_prompt, temperature=0.7):
+    """Call AI API (Groq or Gemini) with automatic retry"""
+    if AI_PROVIDER == "groq":
+        response = client_ai.chat.completions.create(
+            model=AI_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=temperature,
+            max_tokens=2048
+        )
+        return response.choices[0].message.content
+    else:  # gemini
+        response = client_ai.models.generate_content(
+            model=AI_MODEL,
+            contents=[types.Content(role="user", parts=[types.Part(text=user_prompt)])],
             config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                temperature=0.7,
+                system_instruction=system_prompt,
+                temperature=temperature,
             )
         )
         return response.text
-    except ServerError:
-        raise HTTPException(
-            status_code=503,
-            detail="Google AI API ยุ่งอยู่ลองใหม่ในสักครู่นะครับ"
-        )
-    except ClientError as e:
+
+
+def generate(messages):
+    history_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages[:-1]])
+    last_msg = messages[-1]["content"] if messages else ""
+    
+    user_prompt = f"{history_text}\nuser: {last_msg}" if history_text else last_msg
+
+    try:
+        return call_ai_generate(SYSTEM_PROMPT, user_prompt, temperature=0.7)
+    except Exception as e:
         if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
             raise HTTPException(
                 status_code=429,
@@ -202,21 +207,9 @@ async def ai_recommend(user_id: int):
 ให้คำแนะนำสุขภาพแบบธรรมชาติ เป็นย่อหน้าปกติ ห้ามใช้ markdown ห้ามใช้ข้อๆ"""
 
     try:
-        response = call_gemini_generate(
-            model=GEMINI_MODEL,
-            contents=[types.Content(role="user", parts=[types.Part(text=prompt)])],
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                temperature=0.5,
-            )
-        )
-        return {"recommendation": response.text}
-    except ServerError:
-        raise HTTPException(
-            status_code=503,
-            detail="Google AI API ยุ่งอยู่ลองใหม่ในสักครู่นะครับ"
-        )
-    except ClientError as e:
+        result = call_ai_generate(SYSTEM_PROMPT, prompt, temperature=0.5)
+        return {"recommendation": result}
+    except Exception as e:
         if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
             raise HTTPException(
                 status_code=429,
@@ -238,21 +231,9 @@ async def symptom_check(data: dict):
 นี่เป็นการวิเคราะห์เบื้องต้นเท่านั้น"""
 
     try:
-        response = call_gemini_generate(
-            model=GEMINI_MODEL,
-            contents=[types.Content(role="user", parts=[types.Part(text=prompt)])],
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                temperature=0.3,
-            )
-        )
-        return {"result": response.text}
-    except ServerError:
-        raise HTTPException(
-            status_code=503,
-            detail="Google AI API ยุ่งอยู่ลองใหม่ในสักครู่นะครับ"
-        )
-    except ClientError as e:
+        result = call_ai_generate(SYSTEM_PROMPT, prompt, temperature=0.3)
+        return {"result": result}
+    except Exception as e:
         if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
             raise HTTPException(
                 status_code=429,
@@ -302,8 +283,13 @@ async def analyze_food(data: dict):
     prompt = """วิเคราะห์อาหารในรูปนี้ครับ บอกชื่ออาหารและปริมาณโดยประมาณ จากนั้นบอกข้อมูลโภชนาการต่อ 1 จาน ได้แก่ แคลอรี่ โปรตีน คาร์โบไฮเดรต ไขมัน โซเดียม และใยอาหาร แล้วบอกข้อดี ข้อควรระวัง และคำแนะนำสำหรับคนควบคุมน้ำหนัก ตอบเป็นย่อหน้าธรรมดา ห้ามใช้ markdown ห้ามใช้ข้อๆ ถ้าไม่ใช่รูปอาหาร ให้บอกว่า ไม่พบอาหารในรูปนี้ครับ"""
 
     try:
-        response = call_gemini_generate(
-            model=GEMINI_MODEL,
+        # Always use Gemini for image analysis (Groq doesn't support vision)
+        from google import genai
+        from google.genai import types
+        gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+        
+        response = gemini_client.models.generate_content(
+            model="gemini-2.5-flash",
             contents=[
                 types.Content(parts=[
                     types.Part(text=prompt),
@@ -318,12 +304,7 @@ async def analyze_food(data: dict):
         result = response.text
         set_cached_result(image_hash, result)
         return {"result": result, "cached": False}
-    except ServerError:
-        raise HTTPException(
-            status_code=503,
-            detail="Google AI API ยุ่งอยู่ลองใหม่ในสักครู่นะครับ"
-        )
-    except ClientError as e:
+    except Exception as e:
         if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
             raise HTTPException(
                 status_code=429,
@@ -382,16 +363,9 @@ BMI: {bmi} ({bmi_category})
 }}"""
 
     try:
-        response = call_gemini_generate(
-            model=GEMINI_MODEL,
-            contents=[types.Content(role="user", parts=[types.Part(text=prompt)])],
-            config=types.GenerateContentConfig(
-                system_instruction="คุณเป็นแพทย์ผู้เชี่ยวชาญ วิเคราะห์สุขภาพและตอบเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอกจาก JSON",
-                temperature=0.3,
-            )
-        )
+        result = call_ai_generate("คุณเป็นแพทย์ผู้เชี่ยวชาญ วิเคราะห์สุขภาพและตอบเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอกจาก JSON", prompt, temperature=0.3)
 
-        text = response.text.strip()
+        text = result.strip()
         text = text.replace("```json", "").replace("```", "").strip()
         ai_result = json.loads(text)
 
@@ -413,12 +387,7 @@ BMI: {bmi} ({bmi_category})
             "percentile": round(percentile, 1),
             "total_users": len(df)
         }
-    except ServerError:
-        raise HTTPException(
-            status_code=503,
-            detail="Google AI API ยุ่งอยู่ลองใหม่ในสักครู่นะครับ"
-        )
-    except ClientError as e:
+    except Exception as e:
         if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
             raise HTTPException(
                 status_code=429,
@@ -427,9 +396,4 @@ BMI: {bmi} ({bmi_category})
         raise HTTPException(
             status_code=500,
             detail="เกิดข้อผิดพลาด ลองใหม่ในสักครู่นะครับ"
-        )
-    except json.JSONDecodeError:
-        raise HTTPException(
-            status_code=500,
-            detail="ไม่สามารถแปลงผลลัพธ์เป็น JSON ได้ลองใหม่"
         )
