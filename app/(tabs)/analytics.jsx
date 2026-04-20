@@ -5,6 +5,7 @@ import {
 } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import { BarChart, PieChart, LineChart } from "react-native-chart-kit"
+import Svg, { Path, Line, Circle, Text as SvgText } from "react-native-svg"
 import { Colors } from "../../constants/colors"
 import { fetchWithCache } from "../../services/cache"
 import { BASE_URL } from "../../config/api"
@@ -56,14 +57,14 @@ function RadarChart({ data, size = 220 }) {
 
   return (
     <View style={{ alignItems: "center", marginTop: 8 }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         {/* grid rings */}
         {rings.map((d, i) => (
-          <path key={i} d={d} fill="none" stroke={Colors.border} strokeWidth="1" />
+          <Path key={i} d={d} fill="none" stroke={Colors.border} strokeWidth="1" />
         ))}
         {/* axis lines */}
         {axes.map((a, i) => (
-          <line
+          <Line
             key={i}
             x1={a.from.x} y1={a.from.y}
             x2={a.to.x}   y2={a.to.y}
@@ -71,7 +72,7 @@ function RadarChart({ data, size = 220 }) {
           />
         ))}
         {/* data polygon */}
-        <path
+        <Path
           d={dataPath}
           fill={`${Colors.primaryLight}40`}
           stroke={Colors.primaryLight}
@@ -79,27 +80,27 @@ function RadarChart({ data, size = 220 }) {
         />
         {/* dots */}
         {dataPts.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r="4" fill={Colors.primary} />
+          <Circle key={i} cx={p.x} cy={p.y} r="4" fill={Colors.primary} />
         ))}
         {/* labels */}
         {data.map((d, i) => {
           const lp = point(i, r + 20)
           return (
-            <text
+            <SvgText
               key={i}
               x={lp.x} y={lp.y}
               textAnchor="middle"
-              dominantBaseline="middle"
+              alignmentBaseline="middle"
               fontSize="10"
               fill={Colors.text}
             >
               {d.label}
-            </text>
+            </SvgText>
           )
         })}
         {/* value labels on dots */}
         {dataPts.map((p, i) => (
-          <text
+          <SvgText
             key={`v${i}`}
             x={p.x}
             y={p.y - 8}
@@ -109,9 +110,9 @@ function RadarChart({ data, size = 220 }) {
             fill={Colors.primary}
           >
             {data[i].value.toFixed(0)}
-          </text>
+          </SvgText>
         ))}
-      </svg>
+      </Svg>
 
       {/* Legend */}
       <View style={radarStyles.legend}>

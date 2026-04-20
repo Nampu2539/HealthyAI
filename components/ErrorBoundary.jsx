@@ -1,5 +1,6 @@
 import React from "react"
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native"
+import { router } from "expo-router"
 import { Colors } from "../constants/colors"
 
 /**
@@ -71,8 +72,8 @@ export class ErrorBoundary extends React.Component {
             <TouchableOpacity
               style={[styles.button, styles.buttonSecondary]}
               onPress={() => {
-                // Could navigate to home screen
-                console.log("Navigate to home")
+                this.handleReset()
+                router.replace("/(tabs)")
               }}
               activeOpacity={0.7}
             >

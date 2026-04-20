@@ -13,6 +13,7 @@ import { useRouter } from "expo-router"
 import { Colors } from "../../constants/colors"
 import { fetchWithCache } from "../../services/cache"
 import { BASE_URL } from "../../config/api"
+import { validateWellnessResult } from "../../services/validation"
 
 // Create animated SVG Circle for score ring animation
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
@@ -255,6 +256,7 @@ export default function Dashboard() {
         throw new Error(`Server error: ${res.status} ${res.statusText}`)
       }
       const result = await res.json()
+      validateWellnessResult(result)
       setHealthResult(result)
       setFormSubmitted(true)
       await AsyncStorage.setItem("healthForm", JSON.stringify(healthForm))

@@ -14,6 +14,7 @@ export default function FoodScan() {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [lastAnalyzeTime, setLastAnalyzeTime] = useState(0)
 
   const pickImage = async () => {
     try {
@@ -36,7 +37,19 @@ export default function FoodScan() {
   const analyzeFood = async (base64Data, retryCount = 0) => {
     const MAX_RETRIES = 3
     const BASE_DELAY = 2000 // 2 seconds
+    const MIN_INTERVAL = 16000 // 16 seconds between requests (stay under 5/min limit)
     
+    // Check rate limiting
+    const now = Date.now()
+    const timeSinceLastAnalyze = now - lastAnalyzeTime
+    if (timeSinceLastAnalyze < MIN_INTERVAL) {
+      const waitTime = Math.ceil((MIN_INTERVAL - timeSinceLastAnalyze) / 1000)
+      setError(`⏳ รอสักครู่ ${waitTime} วินาที แล้วลองใหม่ครับ`)
+      setLoading(false)
+      return
+    }
+    
+    setLastAnalyzeTime(now)
     setLoading(true); setResult(null); setError(null)
     try {
       const res = await fetch(`${BASE_URL}/analyze-food`, {

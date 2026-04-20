@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react"
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native"
+import AsyncStorage from "@react-native-async-storage/async-storage"
 import { LinearGradient } from "expo-linear-gradient"
 import { Colors } from "../../constants/colors"
 
@@ -28,13 +30,38 @@ const MENU_SECTIONS = [
   },
 ]
 
-const STATS = [
-  { label: "วันที่ใช้งาน", value: "14", emoji: "📅" },
-  { label: "การวิเคราะห์", value: "8", emoji: "🔍" },
-  { label: "คะแนนสูงสุด", value: "82", emoji: "🏆" },
-]
 
 export default function Profile() {
+  const [healthResult, setHealthResult] = useState(null)
+  const [healthForm, setHealthForm] = useState(null)
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const savedResult = await AsyncStorage.getItem("healthResult")
+        const savedForm   = await AsyncStorage.getItem("healthForm")
+        if (savedResult) setHealthResult(JSON.parse(savedResult))
+        if (savedForm)   setHealthForm(JSON.parse(savedForm))
+      } catch (err) {
+        console.error("Profile: ไม่สามารถโหลดข้อมูลได้", err)
+      }
+    }
+    load()
+  }, [])
+
+  const wellnessScore  = healthResult?.overall_score   ?? null
+  const sleepScore     = healthResult?.sleep_score      ?? null
+  const activityScore  = healthResult?.activity_score   ?? null
+  const mentalScore    = healthResult?.mental_score     ?? null
+
+  const fmt = (v) => (v !== null ? Number(v).toFixed(1) : "—")
+
+  const stats = [
+    { label: "อายุ (ปี)",   value: healthForm?.age      ?? "—", emoji: "📅" },
+    { label: "เพศ",         value: healthForm?.gender === "male" ? "ชาย" : healthForm?.gender === "female" ? "หญิง" : "—", emoji: "👤" },
+    { label: "คะแนน",       value: wellnessScore !== null ? Math.round(wellnessScore) : "—", emoji: "🏆" },
+  ]
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -45,11 +72,13 @@ export default function Profile() {
             <Text style={{ fontSize: 40 }}>🌿</Text>
           </View>
           <Text style={styles.name}>HealthyAI User</Text>
-          <Text style={styles.subtitle}>สมาชิกตั้งแต่ เมษายน 2025</Text>
+          <Text style={styles.subtitle}>
+            {healthResult ? "ข้อมูลสุขภาพล่าสุด" : "ยังไม่มีข้อมูลสุขภาพ"}
+          </Text>
 
           {/* Stats Row */}
           <View style={styles.statsRow}>
-            {STATS.map((s) => (
+            {stats.map((s) => (
               <View key={s.label} style={styles.statItem}>
                 <Text style={styles.statEmoji}>{s.emoji}</Text>
                 <Text style={styles.statValue}>{s.value}</Text>
@@ -65,19 +94,25 @@ export default function Profile() {
             <View style={styles.insightDot} />
             <Text style={styles.insightTitle}>สรุปสุขภาพของคุณ</Text>
           </View>
-          <View style={styles.healthRow}>
-            {[
-              { label: "Wellness", value: "82.2", color: Colors.success },
-              { label: "Sleep", value: "88.8", color: Colors.primaryLight },
-              { label: "Activity", value: "100", color: Colors.warning },
-              { label: "Mental", value: "65.2", color: "#8b5cf6" },
-            ].map((item) => (
-              <View key={item.label} style={styles.healthItem}>
-                <Text style={[styles.healthValue, { color: item.color }]}>{item.value}</Text>
-                <Text style={styles.healthLabel}>{item.label}</Text>
-              </View>
-            ))}
-          </View>
+          {healthResult ? (
+            <View style={styles.healthRow}>
+              {[
+                { label: "Wellness",  value: fmt(wellnessScore),  color: Colors.success },
+                { label: "Sleep",     value: fmt(sleepScore),     color: Colors.primaryLight },
+                { label: "Activity",  value: fmt(activityScore),  color: Colors.warning },
+                { label: "Mental",    value: fmt(mentalScore),    color: "#8b5cf6" },
+              ].map((item) => (
+                <View key={item.label} style={styles.healthItem}>
+                  <Text style={[styles.healthValue, { color: item.color }]}>{item.value}</Text>
+                  <Text style={styles.healthLabel}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={{ color: Colors.textMuted, fontSize: 13, textAlign: "center", paddingVertical: 8 }}>
+              ยังไม่มีข้อมูล — กรอกข้อมูลสุขภาพใน Dashboard ก่อนครับ
+            </Text>
+          )}
         </View>
 
         {/* Menu Sections */}
