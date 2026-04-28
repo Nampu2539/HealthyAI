@@ -3,7 +3,7 @@
  * Use this file for all backend API URLs
  */
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "https://healthy-ai.onrender.com"
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://172.21.224.1:8000"
 
 export const BASE_URL = API_URL
 

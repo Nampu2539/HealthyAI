@@ -37,11 +37,17 @@ export default function TabLayout() {
         tabBarIcon: ({ color }) => <Ionicons name="person" size={22} color={color} />
       }} />
 
+      {/* ── Admin ── */}
+      <Tabs.Screen name="admin" options={{
+        title: "Admin",
+        tabBarIcon: ({ color }) => <Ionicons name="person-circle" size={22} color={color} />
+      }} />
+
       {/* Hidden from tab bar — merged into Dashboard */}
-      <Tabs.Screen name="myhealth" options={{ href: null }} />
-      <Tabs.Screen name="symptom" options={{ href: null }} />
+      <Tabs.Screen name="myhealth"     options={{ href: null }} />
+      <Tabs.Screen name="symptom"      options={{ href: null }} />
       <Tabs.Screen name="prescription" options={{ href: null }} />
-      <Tabs.Screen name="monitoring" options={{ href: null }} />
+      <Tabs.Screen name="monitoring"   options={{ href: null }} />
     </Tabs>
   )
 }

@@ -46,6 +46,54 @@ export default function Profile() {
       } catch (err) {
         console.error("Profile: ไม่สามารถโหลดข้อมูลได้", err)
       }
+<<<<<<< Updated upstream
+=======
+      load()
+      return () => { active = false }
+    }, [])
+  )
+
+  const handleMenuPress = (action) => {
+    switch (action) {
+      case "personal":
+        showAlert(
+          "ข้อมูลส่วนตัว",
+          healthForm
+            ? `อายุ: ${healthForm.age} ปี\nเพศ: ${healthForm.gender === "male" ? "ชาย" : "หญิง"}\nน้ำหนัก: ${healthForm.weight} กก.\nส่วนสูง: ${healthForm.height} ซม.`
+            : "ยังไม่มีข้อมูล กรุณากรอกข้อมูลใน Dashboard ก่อนครับ"
+        )
+        break
+      case "goals":
+        showAlert("เป้าหมายสุขภาพ", "ฟีเจอร์นี้กำลังพัฒนาครับ\n\nเร็วๆ นี้จะสามารถตั้งเป้าหมายได้ เช่น\n• น้ำหนักเป้าหมาย\n• ชั่วโมงนอนที่ต้องการ\n• ระดับการออกกำลังกาย")
+        break
+      case "notifications":
+        showAlert("การแจ้งเตือน", "ฟีเจอร์นี้กำลังพัฒนาครับ\n\nเร็วๆ นี้จะสามารถตั้งค่าการแจ้งเตือนได้ เช่น\n• แจ้งเตือนเวลานอน\n• แจ้งเตือนออกกำลังกาย")
+        break
+      case "privacy":
+        showAlert("ความเป็นส่วนตัว", "🔐 ข้อมูลของคุณปลอดภัย\n\nข้อมูลสุขภาพทั้งหมดถูกเก็บไว้ในเครื่องของคุณเท่านั้น ไม่มีการส่งข้อมูลส่วนตัวออกไปยังเซิร์ฟเวอร์ภายนอกครับ")
+        break
+      case "security":
+        showAlert("ความปลอดภัย", "🛡️ ระบบความปลอดภัย\n\nฟีเจอร์นี้กำลังพัฒนาครับ เร็วๆ นี้จะมี\n• ล็อกด้วย PIN\n• ยืนยันตัวตนด้วย Biometric")
+        break
+      case "help":
+        showAlert("ช่วยเหลือ — FAQ", "❓ คำถามที่พบบ่อย\n\nQ: วิธีดูคะแนนสุขภาพ?\nA: ไปที่ Dashboard แล้วกรอกข้อมูลในแท็บ My Stats\n\nQ: ข้อมูลหายไปไหน?\nA: ล้าง Cache ของแอปอาจทำให้ข้อมูลหายได้ครับ\n\nQ: คะแนนคำนวณยังไง?\nA: ใช้ข้อมูลนอน, น้ำหนัก, ส่วนสูง, และกิจกรรมครับ")
+        break
+      case "rate":
+        showAlert(
+          "ให้คะแนนแอป ⭐",
+          "ขอบคุณที่ใช้งาน HealthyAI ครับ!\n\nความคิดเห็นของคุณช่วยให้เราพัฒนาแอปได้ดีขึ้น 🙏",
+          [
+            { text: "ภายหลัง", style: "cancel" },
+            { text: "ให้คะแนน ⭐", onPress: () => {} },
+          ]
+        )
+        break
+      case "version":
+        showAlert("ข้อมูลแอปพลิเคชัน", "📱 HealthyAI\nเวอร์ชัน: 1.0.0\n\nพัฒนาด้วย\n• React Native + Expo\n• AI Wellness Analysis\n• AsyncStorage\n\n© 2026 HealthyAI Team")
+        break
+      default:
+        break
+>>>>>>> Stashed changes
     }
     load()
   }, [])
