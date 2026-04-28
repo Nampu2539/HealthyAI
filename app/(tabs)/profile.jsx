@@ -3,55 +3,196 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from "rea
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { LinearGradient } from "expo-linear-gradient"
 import { useRouter } from "expo-router"
-import { Colors } from "../../constants/colors"
 
+// ── Design Tokens ─────────────────────────────────────────────────────────────
+const P = {
+  navy:        "#0B1D3A",
+  navyMid:     "#152D56",
+  navyLight:   "#1E3F72",
+  accent:      "#3B82F6",
+  accentSoft:  "#EFF6FF",
+  emerald:     "#10B981",
+  emeraldSoft: "#ECFDF5",
+  rose:        "#F43F5E",
+  roseSoft:    "#FFF1F2",
+  amber:       "#F59E0B",
+  text:        "#0F172A",
+  textMuted:   "#64748B",
+  textLight:   "#94A3B8",
+  border:      "rgba(15,23,42,0.07)",
+  borderMed:   "rgba(15,23,42,0.12)",
+  surface:     "#FFFFFF",
+  bg:          "#F5F7FB",
+}
+
+const scoreColor = (v) =>
+  v >= 70 ? P.emerald : v >= 50 ? P.amber : v > 0 ? P.rose : P.textLight
+
+// ── Reusable: Avatar ──────────────────────────────────────────────────────────
+function Avatar({ size = 88 }) {
+  return (
+    <View style={[avStyles.ring, { width: size + 8, height: size + 8, borderRadius: (size + 8) / 2 }]}>
+      <LinearGradient
+        colors={["rgba(255,255,255,0.22)", "rgba(255,255,255,0.08)"]}
+        style={[avStyles.inner, { width: size, height: size, borderRadius: size / 2 }]}
+      >
+        <Text style={{ fontSize: size * 0.42 }}>🌿</Text>
+      </LinearGradient>
+    </View>
+  )
+}
+const avStyles = StyleSheet.create({
+  ring:  { justifyContent: "center", alignItems: "center", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.25)" },
+  inner: { justifyContent: "center", alignItems: "center" },
+})
+
+// ── Reusable: Score Gauge ─────────────────────────────────────────────────────
+function ScoreGauge({ label, value, color }) {
+  const hasData = value !== null && value !== undefined
+  const display = hasData ? Number(value).toFixed(1) : "—"
+  return (
+    <View style={gaugeStyles.wrap}>
+      <Text style={[gaugeStyles.val, { color: hasData ? color : P.textLight }]}>{display}</Text>
+      <View style={[gaugeStyles.track, { marginTop: 6 }]}>
+        <View style={[gaugeStyles.fill, { width: hasData ? `${Math.min(Number(value), 100)}%` : "0%", backgroundColor: color }]} />
+      </View>
+      <Text style={gaugeStyles.label}>{label}</Text>
+    </View>
+  )
+}
+const gaugeStyles = StyleSheet.create({
+  wrap:  { flex: 1, alignItems: "center", paddingHorizontal: 4 },
+  val:   { fontSize: 20, fontWeight: "800", letterSpacing: -0.5 },
+  track: { width: "100%", height: 3, backgroundColor: "rgba(148,163,184,0.2)", borderRadius: 2, overflow: "hidden" },
+  fill:  { height: 3, borderRadius: 2 },
+  label: { fontSize: 10, color: P.textLight, marginTop: 5, fontWeight: "500", textTransform: "uppercase", letterSpacing: 0.5 },
+})
+
+// ── Reusable: Menu Row ────────────────────────────────────────────────────────
+function MenuRow({ icon, label, sub, onPress, isLast, accent }) {
+  return (
+    <>
+      <TouchableOpacity style={menuStyles.row} onPress={onPress} activeOpacity={0.65}>
+        <View style={[menuStyles.iconBox, accent && { backgroundColor: accent + "15" }]}>
+          <Text style={menuStyles.icon}>{icon}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[menuStyles.label, accent && { color: accent }]}>{label}</Text>
+          {sub ? <Text style={menuStyles.sub}>{sub}</Text> : null}
+        </View>
+        <Text style={[menuStyles.arrow, accent && { color: accent + "80" }]}>›</Text>
+      </TouchableOpacity>
+      {!isLast && <View style={menuStyles.sep} />}
+    </>
+  )
+}
+const menuStyles = StyleSheet.create({
+  row:     { flexDirection: "row", alignItems: "center", paddingVertical: 13, paddingHorizontal: 16, gap: 12 },
+  iconBox: { width: 38, height: 38, borderRadius: 11, backgroundColor: P.accentSoft, justifyContent: "center", alignItems: "center" },
+  icon:    { fontSize: 16 },
+  label:   { fontSize: 14, fontWeight: "600", color: P.text },
+  sub:     { fontSize: 11, color: P.textLight, marginTop: 1 },
+  arrow:   { fontSize: 20, color: P.textLight, fontWeight: "300" },
+  sep:     { height: 0.5, backgroundColor: P.border, marginLeft: 66 },
+})
+
+// ── Reusable: Card ────────────────────────────────────────────────────────────
+function Card({ children, style }) {
+  return <View style={[cardStyles.card, style]}>{children}</View>
+}
+const cardStyles = StyleSheet.create({
+  card: {
+    backgroundColor: P.surface, borderRadius: 18,
+    borderWidth: 0.5, borderColor: P.border,
+    shadowColor: P.navy, shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 10, elevation: 3,
+    overflow: "hidden",
+  },
+})
+
+// ── Reusable: Section Label ───────────────────────────────────────────────────
+function SectionLabel({ text }) {
+  return (
+    <Text style={secStyles.label}>{text}</Text>
+  )
+}
+const secStyles = StyleSheet.create({
+  label: {
+    fontSize: 11, fontWeight: "700", color: P.textLight,
+    textTransform: "uppercase", letterSpacing: 1,
+    paddingHorizontal: 4, marginBottom: 8,
+  },
+})
+
+// ── Stat Pill ─────────────────────────────────────────────────────────────────
+function StatPill({ emoji, value, label }) {
+  return (
+    <View style={statStyles.pill}>
+      <Text style={statStyles.emoji}>{emoji}</Text>
+      <Text style={statStyles.val}>{value}</Text>
+      <Text style={statStyles.label}>{label}</Text>
+    </View>
+  )
+}
+const statStyles = StyleSheet.create({
+  pill:  { flex: 1, alignItems: "center", paddingVertical: 14 },
+  emoji: { fontSize: 18, marginBottom: 5 },
+  val:   { color: "#fff", fontSize: 19, fontWeight: "800", letterSpacing: -0.3 },
+  label: { color: "rgba(255,255,255,0.5)", fontSize: 10, marginTop: 3, fontWeight: "500" },
+})
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 const MENU_SECTIONS = [
   {
     title: "บัญชีของฉัน",
     items: [
-      { icon: "👤", label: "ข้อมูลส่วนตัว", sub: "แก้ไขชื่อและรูปโปรไฟล์" },
-      { icon: "🎯", label: "เป้าหมายสุขภาพ", sub: "ตั้งเป้าหมายการออกกำลังกาย" },
-      { icon: "🔔", label: "การแจ้งเตือน", sub: "จัดการการแจ้งเตือนทั้งหมด" },
-    ]
+      { icon: "👤", label: "ข้อมูลส่วนตัว",  sub: "แก้ไขชื่อและรูปโปรไฟล์",       action: "personal"      },
+      { icon: "🎯", label: "เป้าหมายสุขภาพ", sub: "ตั้งเป้าหมายการออกกำลังกาย",   action: "goals"         },
+      { icon: "🔔", label: "การแจ้งเตือน",   sub: "จัดการการแจ้งเตือนทั้งหมด",    action: "notifications" },
+    ],
   },
   {
     title: "ความปลอดภัย",
     items: [
-      { icon: "🔒", label: "ความเป็นส่วนตัว", sub: "การจัดการข้อมูลส่วนตัว" },
-      { icon: "🛡️", label: "ความปลอดภัย", sub: "รหัสผ่านและการยืนยันตัวตน" },
-    ]
+      { icon: "🔒", label: "ความเป็นส่วนตัว", sub: "การจัดการข้อมูลส่วนตัว",      action: "privacy"  },
+      { icon: "🛡️", label: "ความปลอดภัย",    sub: "รหัสผ่านและการยืนยันตัวตน",   action: "security" },
+    ],
   },
   {
     title: "ทั่วไป",
     items: [
-      { icon: "❓", label: "ช่วยเหลือ", sub: "คำถามที่พบบ่อย" },
-      { icon: "⭐", label: "ให้คะแนนแอป", sub: "บอกเราว่าคุณชอบอะไร" },
-      { icon: "📋", label: "เวอร์ชัน 1.0.0", sub: "ข้อมูลแอปพลิเคชัน" },
-    ]
+      { icon: "❓", label: "ช่วยเหลือ",       sub: "คำถามที่พบบ่อย",              action: "help"    },
+      { icon: "⭐", label: "ให้คะแนนแอป",    sub: "บอกเราว่าคุณชอบอะไร",          action: "rate"    },
+      { icon: "📋", label: "เวอร์ชัน 1.0.0",  sub: "ข้อมูลแอปพลิเคชัน",           action: "version" },
+    ],
   },
 ]
+
+const showAlert = (title, msg, buttons) =>
+  Alert.alert(title, msg, buttons ?? [{ text: "ตกลง" }])
 
 export default function Profile() {
   const router = useRouter()
   const [healthResult, setHealthResult] = useState(null)
-  const [healthForm, setHealthForm] = useState(null)
+  const [healthForm,   setHealthForm]   = useState(null)
 
   useEffect(() => {
+    let active = true
     const load = async () => {
       try {
-        const savedResult = await AsyncStorage.getItem("healthResult")
-        const savedForm   = await AsyncStorage.getItem("healthForm")
-        if (savedResult) setHealthResult(JSON.parse(savedResult))
-        if (savedForm)   setHealthForm(JSON.parse(savedForm))
+        const [r, f] = await Promise.all([
+          AsyncStorage.getItem("healthResult"),
+          AsyncStorage.getItem("healthForm"),
+        ])
+        if (active && r) setHealthResult(JSON.parse(r))
+        if (active && f) setHealthForm(JSON.parse(f))
       } catch (err) {
-        console.error("Profile: ไม่สามารถโหลดข้อมูลได้", err)
+        console.error("Profile: load error", err)
       }
-<<<<<<< Updated upstream
-=======
-      load()
-      return () => { active = false }
-    }, [])
-  )
+    }
+    load()
+    return () => { active = false }
+  }, [])
 
   const handleMenuPress = (action) => {
     switch (action) {
@@ -61,267 +202,234 @@ export default function Profile() {
           healthForm
             ? `อายุ: ${healthForm.age} ปี\nเพศ: ${healthForm.gender === "male" ? "ชาย" : "หญิง"}\nน้ำหนัก: ${healthForm.weight} กก.\nส่วนสูง: ${healthForm.height} ซม.`
             : "ยังไม่มีข้อมูล กรุณากรอกข้อมูลใน Dashboard ก่อนครับ"
-        )
-        break
+        ); break
       case "goals":
-        showAlert("เป้าหมายสุขภาพ", "ฟีเจอร์นี้กำลังพัฒนาครับ\n\nเร็วๆ นี้จะสามารถตั้งเป้าหมายได้ เช่น\n• น้ำหนักเป้าหมาย\n• ชั่วโมงนอนที่ต้องการ\n• ระดับการออกกำลังกาย")
-        break
+        showAlert("เป้าหมายสุขภาพ", "ฟีเจอร์นี้กำลังพัฒนาครับ\n\nเร็วๆ นี้จะสามารถตั้งเป้าหมายได้ เช่น\n• น้ำหนักเป้าหมาย\n• ชั่วโมงนอนที่ต้องการ\n• ระดับการออกกำลังกาย"); break
       case "notifications":
-        showAlert("การแจ้งเตือน", "ฟีเจอร์นี้กำลังพัฒนาครับ\n\nเร็วๆ นี้จะสามารถตั้งค่าการแจ้งเตือนได้ เช่น\n• แจ้งเตือนเวลานอน\n• แจ้งเตือนออกกำลังกาย")
-        break
+        showAlert("การแจ้งเตือน", "ฟีเจอร์นี้กำลังพัฒนาครับ\n\nเร็วๆ นี้จะสามารถตั้งค่าการแจ้งเตือนได้ เช่น\n• แจ้งเตือนเวลานอน\n• แจ้งเตือนออกกำลังกาย"); break
       case "privacy":
-        showAlert("ความเป็นส่วนตัว", "🔐 ข้อมูลของคุณปลอดภัย\n\nข้อมูลสุขภาพทั้งหมดถูกเก็บไว้ในเครื่องของคุณเท่านั้น ไม่มีการส่งข้อมูลส่วนตัวออกไปยังเซิร์ฟเวอร์ภายนอกครับ")
-        break
+        showAlert("ความเป็นส่วนตัว", "🔐 ข้อมูลของคุณปลอดภัย\n\nข้อมูลสุขภาพทั้งหมดถูกเก็บไว้ในเครื่องของคุณเท่านั้น"); break
       case "security":
-        showAlert("ความปลอดภัย", "🛡️ ระบบความปลอดภัย\n\nฟีเจอร์นี้กำลังพัฒนาครับ เร็วๆ นี้จะมี\n• ล็อกด้วย PIN\n• ยืนยันตัวตนด้วย Biometric")
-        break
+        showAlert("ความปลอดภัย", "🛡️ ฟีเจอร์กำลังพัฒนาครับ\n\n• ล็อกด้วย PIN\n• ยืนยันตัวตนด้วย Biometric"); break
       case "help":
-        showAlert("ช่วยเหลือ — FAQ", "❓ คำถามที่พบบ่อย\n\nQ: วิธีดูคะแนนสุขภาพ?\nA: ไปที่ Dashboard แล้วกรอกข้อมูลในแท็บ My Stats\n\nQ: ข้อมูลหายไปไหน?\nA: ล้าง Cache ของแอปอาจทำให้ข้อมูลหายได้ครับ\n\nQ: คะแนนคำนวณยังไง?\nA: ใช้ข้อมูลนอน, น้ำหนัก, ส่วนสูง, และกิจกรรมครับ")
-        break
+        showAlert("ช่วยเหลือ — FAQ", "Q: วิธีดูคะแนนสุขภาพ?\nA: ไปที่ Dashboard แล้วกรอกข้อมูลใน My Stats\n\nQ: ข้อมูลหายไปไหน?\nA: ล้าง Cache ของแอปอาจทำให้ข้อมูลหายได้ครับ"); break
       case "rate":
-        showAlert(
-          "ให้คะแนนแอป ⭐",
-          "ขอบคุณที่ใช้งาน HealthyAI ครับ!\n\nความคิดเห็นของคุณช่วยให้เราพัฒนาแอปได้ดีขึ้น 🙏",
-          [
-            { text: "ภายหลัง", style: "cancel" },
-            { text: "ให้คะแนน ⭐", onPress: () => {} },
-          ]
-        )
-        break
+        showAlert("ให้คะแนนแอป ⭐", "ขอบคุณที่ใช้งาน HealthyAI ครับ!\nความคิดเห็นของคุณช่วยให้เราพัฒนาแอปได้ดีขึ้น 🙏", [
+          { text: "ภายหลัง", style: "cancel" },
+          { text: "ให้คะแนน ⭐", onPress: () => {} },
+        ]); break
       case "version":
-        showAlert("ข้อมูลแอปพลิเคชัน", "📱 HealthyAI\nเวอร์ชัน: 1.0.0\n\nพัฒนาด้วย\n• React Native + Expo\n• AI Wellness Analysis\n• AsyncStorage\n\n© 2026 HealthyAI Team")
-        break
-      default:
-        break
->>>>>>> Stashed changes
+        showAlert("HealthyAI", "📱 เวอร์ชัน: 1.0.0\n\nพัฒนาด้วย\n• React Native + Expo\n• AI Wellness Analysis\n• AsyncStorage\n\n© 2026 HealthyAI Team"); break
+      default: break
     }
-    load()
-  }, [])
-
-  const handleLogout = async () => {
-    Alert.alert(
-      "ออกจากระบบ",
-      "คุณต้องการล้างข้อมูลสุขภาพและออกจากระบบใช่ไหมครับ?",
-      [
-        { text: "ยกเลิก", style: "cancel" },
-        {
-          text: "ออกจากระบบ",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await AsyncStorage.multiRemove(["healthForm", "healthResult"])
-              router.replace("/")
-            } catch (err) {
-              console.error("Logout error:", err)
-            }
-          }
-        }
-      ]
-    )
   }
 
-  const wellnessScore = healthResult?.overall_score ?? null
-  const sleepScore    = healthResult?.sleep_score   ?? null
-  const activityScore = healthResult?.activity_score ?? null
-  const mentalScore   = healthResult?.mental_score  ?? null
+  const handleLogout = () => {
+    Alert.alert("ออกจากระบบ", "ต้องการล้างข้อมูลสุขภาพและออกจากระบบใช่ไหมครับ?", [
+      { text: "ยกเลิก", style: "cancel" },
+      {
+        text: "ออกจากระบบ", style: "destructive",
+        onPress: async () => {
+          try {
+            await AsyncStorage.multiRemove(["healthForm", "healthResult"])
+            router.replace("/")
+          } catch (err) { console.error("Logout error:", err) }
+        },
+      },
+    ])
+  }
 
-  const fmt = (v) => (v !== null ? Number(v).toFixed(1) : "—")
+  const handleClearData = () => {
+    Alert.alert("ล้างข้อมูลสุขภาพ", "ต้องการล้างข้อมูลสุขภาพที่บันทึกไว้ใช่ไหมครับ?", [
+      { text: "ยกเลิก", style: "cancel" },
+      {
+        text: "ล้างข้อมูล", style: "destructive",
+        onPress: async () => {
+          await AsyncStorage.multiRemove(["healthForm", "healthResult"])
+          setHealthResult(null)
+          setHealthForm(null)
+        },
+      },
+    ])
+  }
 
-  const stats = [
-    { label: "อายุ (ปี)", value: healthForm?.age ?? "—", emoji: "📅" },
-    { label: "เพศ", value: healthForm?.gender === "male" ? "ชาย" : healthForm?.gender === "female" ? "หญิง" : "—", emoji: "👤" },
-    { label: "คะแนน", value: wellnessScore !== null ? Math.round(wellnessScore) : "—", emoji: "🏆" },
+  const fmt    = (v) => (v !== null && v !== undefined ? Number(v).toFixed(1) : null)
+  const scores = [
+    { label: "Wellness",  value: fmt(healthResult?.overall_score),  color: scoreColor(healthResult?.overall_score  ?? 0) },
+    { label: "Sleep",     value: fmt(healthResult?.sleep_score),     color: scoreColor(healthResult?.sleep_score    ?? 0) },
+    { label: "Activity",  value: fmt(healthResult?.activity_score),  color: scoreColor(healthResult?.activity_score ?? 0) },
+    { label: "Mental",    value: fmt(healthResult?.mental_score),    color: scoreColor(healthResult?.mental_score   ?? 0) },
   ]
+  const hasData = !!healthResult
 
   return (
-    <View style={{ flex: 1 }}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <View style={S.root}>
+      <ScrollView showsVerticalScrollIndicator={false}>
 
-        {/* Header */}
-        <LinearGradient colors={[Colors.primary, Colors.primaryDark]} style={styles.header}>
-          <View style={styles.avatarWrap}>
-            <Text style={{ fontSize: 40 }}>🌿</Text>
+        {/* ── Hero ── */}
+        <LinearGradient
+          colors={[P.navy, P.navyMid, P.navyLight]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={S.hero}
+        >
+          {/* eyebrow */}
+          <Text style={S.eyebrow}>MY PROFILE</Text>
+
+          {/* avatar + name */}
+          <View style={S.avatarBlock}>
+            <Avatar size={84} />
+            <View style={{ marginTop: 14 }}>
+              <Text style={S.heroName}>HealthyAI User</Text>
+              <View style={S.statusRow}>
+                <View style={[S.statusDot, { backgroundColor: hasData ? P.emerald : P.textLight }]} />
+                <Text style={S.statusText}>
+                  {hasData ? "ข้อมูลสุขภาพล่าสุด" : "ยังไม่มีข้อมูลสุขภาพ"}
+                </Text>
+              </View>
+            </View>
           </View>
-          <Text style={styles.name}>HealthyAI User</Text>
-          <Text style={styles.subtitle}>
-            {healthResult ? "ข้อมูลสุขภาพล่าสุด" : "ยังไม่มีข้อมูลสุขภาพ"}
-          </Text>
 
-          <View style={styles.statsRow}>
-            {stats.map((s, i) => (
-              <View key={s.label} style={[
-                styles.statItem,
-                i < stats.length - 1 && { borderRightWidth: 0.5, borderRightColor: "rgba(255,255,255,0.2)" }
-              ]}>
-                <Text style={styles.statEmoji}>{s.emoji}</Text>
-                <Text style={styles.statValue}>{s.value}</Text>
-                <Text style={styles.statLabel}>{s.label}</Text>
+          {/* stat strip */}
+          <View style={S.statStrip}>
+            {[
+              { emoji: "📅", value: healthForm?.age ?? "—",  label: "อายุ (ปี)" },
+              { emoji: "👤", value: healthForm?.gender === "male" ? "ชาย" : healthForm?.gender === "female" ? "หญิง" : "—", label: "เพศ" },
+              { emoji: "🏆", value: healthResult ? Math.round(healthResult.overall_score) : "—", label: "คะแนน" },
+            ].map((s, i) => (
+              <View key={s.label} style={[S.statCell, i > 0 && S.statDivider]}>
+                <StatPill emoji={s.emoji} value={s.value} label={s.label} />
               </View>
             ))}
           </View>
         </LinearGradient>
 
-        {/* Health Summary Card */}
-        <View style={styles.healthCard}>
-          <View style={styles.insightHeader}>
-            <View style={styles.insightDot} />
-            <Text style={styles.insightTitle}>สรุปสุขภาพของคุณ</Text>
-          </View>
-          {healthResult ? (
-            <View style={styles.healthRow}>
-              {[
-                { label: "Wellness",  value: fmt(wellnessScore),  color: Colors.success },
-                { label: "Sleep",     value: fmt(sleepScore),     color: Colors.primaryLight },
-                { label: "Activity",  value: fmt(activityScore),  color: Colors.warning },
-                { label: "Mental",    value: fmt(mentalScore),    color: "#8b5cf6" },
-              ].map((item) => (
-                <View key={item.label} style={styles.healthItem}>
-                  <Text style={[styles.healthValue, { color: item.color }]}>{item.value}</Text>
-                  <Text style={styles.healthLabel}>{item.label}</Text>
+        {/* ── Health Summary (floats over hero) ── */}
+        <View style={S.summaryLift}>
+          <Card>
+            <View style={S.summaryInner}>
+              <View style={S.summaryHeader}>
+                <View style={S.summaryDot} />
+                <Text style={S.summaryTitle}>สรุปสุขภาพของคุณ</Text>
+                {hasData && (
+                  <View style={S.goodBadge}>
+                    <Text style={S.goodBadgeText}>
+                      {(healthResult?.overall_score ?? 0) >= 70 ? "ดีมาก" : "ต้องพัฒนา"}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {hasData ? (
+                <View style={S.gaugeRow}>
+                  {scores.map(s => (
+                    <ScoreGauge key={s.label} label={s.label} value={s.value} color={s.color} />
+                  ))}
                 </View>
-              ))}
+              ) : (
+                <View style={S.emptyBox}>
+                  <Text style={S.emptyIcon}>📋</Text>
+                  <Text style={S.emptyTitle}>ยังไม่มีข้อมูล</Text>
+                  <Text style={S.emptySub}>กรอกข้อมูลสุขภาพใน Dashboard ก่อนครับ</Text>
+                </View>
+              )}
             </View>
-          ) : (
-            <View style={styles.emptyHealth}>
-              <Text style={{ fontSize: 32, marginBottom: 8 }}>📋</Text>
-              <Text style={{ color: Colors.textMuted, fontSize: 13, textAlign: "center" }}>
-                ยังไม่มีข้อมูล
-              </Text>
-              <Text style={{ color: Colors.textMuted, fontSize: 12, textAlign: "center", marginTop: 4 }}>
-                กรอกข้อมูลสุขภาพใน Dashboard ก่อนครับ
-              </Text>
-            </View>
-          )}
+          </Card>
         </View>
 
-        {/* Menu Sections */}
-        {MENU_SECTIONS.map((section) => (
-          <View key={section.title} style={styles.sectionWrap}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={styles.menuCard}>
-              {section.items.map((item, i) => (
-                <View key={item.label}>
-                  <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-                    <View style={styles.menuIconWrap}>
-                      <Text style={{ fontSize: 18 }}>{item.icon}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.menuLabel}>{item.label}</Text>
-                      <Text style={styles.menuSub}>{item.sub}</Text>
-                    </View>
-                    <Text style={styles.menuArrow}>›</Text>
-                  </TouchableOpacity>
-                  {i < section.items.length - 1 && <View style={styles.divider} />}
-                </View>
-              ))}
+        {/* ── Menu Sections ── */}
+        <View style={S.body}>
+          {MENU_SECTIONS.map((sec) => (
+            <View key={sec.title} style={S.section}>
+              <SectionLabel text={sec.title} />
+              <Card>
+                {sec.items.map((item, i) => (
+                  <MenuRow
+                    key={item.action}
+                    icon={item.icon}
+                    label={item.label}
+                    sub={item.sub}
+                    onPress={() => handleMenuPress(item.action)}
+                    isLast={i === sec.items.length - 1}
+                  />
+                ))}
+              </Card>
             </View>
+          ))}
+
+          {/* ── Danger Zone ── */}
+          <View style={S.section}>
+            <SectionLabel text="จัดการข้อมูล" />
+            <Card>
+              {hasData && (
+                <MenuRow
+                  icon="🗑️"
+                  label="ล้างข้อมูลสุขภาพ"
+                  sub="ลบข้อมูลที่บันทึกไว้ทั้งหมด"
+                  onPress={handleClearData}
+                  isLast={false}
+                  accent={P.amber}
+                />
+              )}
+              <MenuRow
+                icon="🚪"
+                label="ออกจากระบบ"
+                sub="ล้างข้อมูลและกลับหน้าแรก"
+                onPress={handleLogout}
+                isLast
+                accent={P.rose}
+              />
+            </Card>
           </View>
-        ))}
 
-        {/* Clear Health Data */}
-        {healthResult && (
-          <TouchableOpacity
-            style={styles.clearBtn}
-            activeOpacity={0.8}
-            onPress={async () => {
-              Alert.alert(
-                "ล้างข้อมูลสุขภาพ",
-                "ต้องการล้างข้อมูลสุขภาพที่บันทึกไว้ใช่ไหมครับ?",
-                [
-                  { text: "ยกเลิก", style: "cancel" },
-                  {
-                    text: "ล้างข้อมูล",
-                    style: "destructive",
-                    onPress: async () => {
-                      await AsyncStorage.multiRemove(["healthForm", "healthResult"])
-                      setHealthResult(null)
-                      setHealthForm(null)
-                    }
-                  }
-                ]
-              )
-            }}
-          >
-            <Text style={styles.clearText}>🗑️ ล้างข้อมูลสุขภาพ</Text>
-          </TouchableOpacity>
-        )}
+          {/* version tag */}
+          <Text style={S.versionTag}>HealthyAI · v1.0.0 · © 2026</Text>
+        </View>
 
-        {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
-          <Text style={styles.logoutText}>🚪 ออกจากระบบ</Text>
-        </TouchableOpacity>
-
-        <View style={{ height: 100 }} />
+        <View style={{ height: 110 }} />
       </ScrollView>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: { padding: 24, paddingTop: 52, paddingBottom: 32, alignItems: "center" },
-  avatarWrap: {
-    width: 90, height: 90, borderRadius: 45,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    justifyContent: "center", alignItems: "center",
-    marginBottom: 12, borderWidth: 3, borderColor: "rgba(255,255,255,0.3)",
-  },
-  name:     { color: "#fff", fontSize: 22, fontWeight: "bold" },
-  subtitle: { color: "rgba(255,255,255,0.65)", fontSize: 13, marginTop: 4 },
-  statsRow: { flexDirection: "row", marginTop: 24, width: "100%" },
-  statItem: { flex: 1, alignItems: "center" },
-  statEmoji: { fontSize: 18, marginBottom: 4 },
-  statValue: { color: "#fff", fontSize: 20, fontWeight: "bold" },
-  statLabel: { color: "rgba(255,255,255,0.65)", fontSize: 10, marginTop: 2, textAlign: "center" },
+const S = StyleSheet.create({
+  root: { flex: 1, backgroundColor: P.bg },
 
-  healthCard: {
-    backgroundColor: Colors.card, marginHorizontal: 16, marginTop: -16,
-    borderRadius: 20, padding: 18, elevation: 6,
-    borderWidth: 0.5, borderColor: Colors.border, marginBottom: 8,
-  },
-  insightHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 },
-  insightDot:    { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primaryLight },
-  insightTitle:  { color: Colors.primary, fontWeight: "bold", fontSize: 13 },
-  healthRow:     { flexDirection: "row", justifyContent: "space-between" },
-  healthItem:    { alignItems: "center" },
-  healthValue:   { fontSize: 20, fontWeight: "bold" },
-  healthLabel:   { color: Colors.textMuted, fontSize: 10, marginTop: 3 },
-  emptyHealth:   { alignItems: "center", paddingVertical: 12 },
+  // Hero
+  hero:       { paddingTop: 54, paddingBottom: 48, paddingHorizontal: 24 },
+  eyebrow:    { color: "rgba(255,255,255,0.4)", fontSize: 10, letterSpacing: 2, fontWeight: "700", marginBottom: 20 },
+  avatarBlock:{ alignItems: "center" },
+  heroName:   { color: "#fff", fontSize: 22, fontWeight: "800", textAlign: "center", letterSpacing: -0.4, marginTop: 2 },
+  statusRow:  { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 6 },
+  statusDot:  { width: 6, height: 6, borderRadius: 3 },
+  statusText: { color: "rgba(255,255,255,0.55)", fontSize: 12, fontWeight: "500" },
+  statStrip:  { flexDirection: "row", marginTop: 28, backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden" },
+  statCell:   { flex: 1 },
+  statDivider:{ borderLeftWidth: 0.5, borderLeftColor: "rgba(255,255,255,0.12)" },
 
-  sectionWrap:  { paddingHorizontal: 16, marginTop: 16 },
-  sectionTitle: {
-    color: Colors.textMuted, fontSize: 12, fontWeight: "600",
-    marginBottom: 8, paddingLeft: 4,
-    textTransform: "uppercase", letterSpacing: 0.5,
-  },
-  menuCard: {
-    backgroundColor: Colors.card, borderRadius: 16,
-    overflow: "hidden", borderWidth: 0.5, borderColor: Colors.border, elevation: 2,
-  },
-  menuItem: { flexDirection: "row", alignItems: "center", padding: 16, gap: 12 },
-  menuIconWrap: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: Colors.accentLight,
-    justifyContent: "center", alignItems: "center",
-  },
-  menuLabel: { color: Colors.text, fontSize: 15, fontWeight: "500" },
-  menuSub:   { color: Colors.textMuted, fontSize: 12, marginTop: 2 },
-  menuArrow: { color: Colors.textMuted, fontSize: 22 },
-  divider:   { height: 0.5, backgroundColor: Colors.border, marginLeft: 68 },
+  // Summary card (lifted)
+  summaryLift: { marginHorizontal: 16, marginTop: -22, zIndex: 10 },
+  summaryInner:{ padding: 18 },
+  summaryHeader:{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 },
+  summaryDot:   { width: 7, height: 7, borderRadius: 3.5, backgroundColor: P.accent },
+  summaryTitle: { flex: 1, fontSize: 13, fontWeight: "700", color: P.text },
+  goodBadge:    { backgroundColor: P.emeraldSoft, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  goodBadgeText:{ fontSize: 11, fontWeight: "700", color: P.emerald },
+  gaugeRow:     { flexDirection: "row", gap: 4 },
 
-  clearBtn: {
-    marginHorizontal: 16, marginTop: 20,
-    backgroundColor: Colors.card, borderRadius: 16,
-    padding: 16, alignItems: "center",
-    borderWidth: 1, borderColor: Colors.border,
-  },
-  clearText: { color: Colors.textMuted, fontWeight: "600", fontSize: 14 },
+  // Empty state
+  emptyBox:  { alignItems: "center", paddingVertical: 16 },
+  emptyIcon: { fontSize: 28, marginBottom: 8 },
+  emptyTitle:{ fontSize: 14, fontWeight: "600", color: P.textMuted },
+  emptySub:  { fontSize: 12, color: P.textLight, marginTop: 4, textAlign: "center" },
 
-  logoutBtn: {
-    marginHorizontal: 16, marginTop: 10,
-    backgroundColor: Colors.card, borderRadius: 16,
-    padding: 16, alignItems: "center",
-    borderWidth: 1, borderColor: "#f5c6c6",
+  // Body
+  body:    { paddingHorizontal: 16, paddingTop: 20 },
+  section: { marginBottom: 20 },
+
+  // Version
+  versionTag: {
+    textAlign: "center", fontSize: 11,
+    color: P.textLight, marginTop: 4, marginBottom: 8,
+    fontWeight: "500", letterSpacing: 0.3,
   },
-  logoutText: { color: Colors.danger, fontWeight: "bold", fontSize: 15 },
 })
